@@ -36,27 +36,40 @@
 namespace report
 {
 
-using ValueVector = std::vector< Value >;
-
 using URL = boost::url;
 
+template < typename Value >
 class Link;
+
+template < typename Value >
 class Line;
+
+template < typename Value >
 class Multiline;
+
+template < typename Value >
 class Branch;
+
+template < typename Value >
 class Table;
+
+template < typename Value >
 class Graph;
 
-using Container       = std::variant< Line, Multiline, Branch, Table, Graph >;
-using ContainerVector = std::vector< Container >;
+template < typename Value >
+using Container = std::variant< Line< Value >, Multiline< Value >, Branch< Value >, Table< Value >, Graph< Value > >;
+
+template < typename Value >
+using ContainerVector = std::vector< Container< Value > >;
 
 /***
     Line{ Value, opt< URL >, opt< Bookmark > }
 */
+template < typename Value >
 class Line
 {
     friend class boost::serialization::access;
-    
+
     template < class Archive >
     inline void serialize( Archive& archive, const unsigned int version )
     {
@@ -76,6 +89,7 @@ public:
 /***
     Multiline{ vec< Value >, opt< URL >, opt< Bookmark > }
 */
+template < typename Value >
 class Multiline
 {
     friend class boost::serialization::access;
@@ -88,7 +102,7 @@ class Multiline
     }
 
 public:
-    ValueVector            m_elements;
+    ValueVector< Value >   m_elements;
     std::optional< URL >   m_url;
     std::optional< Value > m_bookmark;
     Colour                 m_colour            = Colour::black;
@@ -98,6 +112,7 @@ public:
 /***
     Branch{ vec< Value >, vec< Container >, opt< Bookmark > }
 */
+template < typename Value >
 class Branch
 {
     friend class boost::serialization::access;
@@ -110,9 +125,9 @@ class Branch
     }
 
 public:
-    ValueVector            m_label;
-    ContainerVector        m_elements;
-    std::optional< Value > m_bookmark;
+    ValueVector< Value >     m_label;
+    ContainerVector< Value > m_elements;
+    std::optional< Value >   m_bookmark;
 };
 
 /***
@@ -120,6 +135,7 @@ public:
 
     NOTE: If headings can be left empty and heading row will be omitted
 */
+template < typename Value >
 class Table
 {
     friend class boost::serialization::access;
@@ -131,8 +147,8 @@ class Table
     }
 
 public:
-    std::vector< Value >           m_headings;
-    std::vector< ContainerVector > m_rows;
+    std::vector< Value >                    m_headings;
+    std::vector< ContainerVector< Value > > m_rows;
 };
 
 /***
@@ -143,6 +159,7 @@ public:
 
     Edge Styles: dashed, dotted, solid, invis, bold
 */
+template < typename Value >
 class Graph
 {
     friend class boost::serialization::access;
@@ -209,13 +226,13 @@ public:
         using ID     = std::size_t;
         using Vector = std::vector< Node >;
 
-        std::vector< ValueVector > m_rows;
+        std::vector< ValueVector< Value > > m_rows;
 
-        Colour                     m_colour = Colour::blue;
-        std::optional< URL >       m_url;
-        std::optional< Value >     m_bookmark;
-        Colour                     m_background_colour = Colour::lightblue;
-        int                        m_border_width      = 1;
+        Colour                 m_colour = Colour::blue;
+        std::optional< URL >   m_url;
+        std::optional< Value > m_bookmark;
+        Colour                 m_background_colour = Colour::lightblue;
+        int                    m_border_width      = 1;
     };
 
     class Subgraph
@@ -234,12 +251,12 @@ public:
     public:
         using Vector = std::vector< Subgraph >;
 
-        std::vector< ValueVector > m_rows;
-        std::vector< Node::ID >    m_nodes;
-        
-        Colour                     m_colour = Colour::lightblue;
-        std::optional< URL >       m_url;
-        std::optional< Value >     m_bookmark;
+        std::vector< ValueVector< Value > > m_rows;
+        std::vector< typename Node::ID >    m_nodes;
+
+        Colour                 m_colour = Colour::lightblue;
+        std::optional< URL >   m_url;
+        std::optional< Value > m_bookmark;
     };
 
     class Edge
@@ -296,20 +313,20 @@ public:
             Type m_style = solid;
         };
 
-        Node::ID m_source, m_target;
+        typename Node::ID m_source, m_target;
 
-        Colour   m_colour          = Colour::black;
-        Style    m_style           = Style::solid;
-        bool     m_bIgnoreInLayout = false;
-        int      line_width        = 1;
-        
+        Colour m_colour          = Colour::black;
+        Style  m_style           = Style::solid;
+        bool   m_bIgnoreInLayout = false;
+        int    line_width        = 1;
+
         std::optional< std::vector< Value > > m_label;
     };
 
-    Node::Vector     m_nodes;
-    Edge::Vector     m_edges;
-    Subgraph::Vector m_subgraphs;
-    RankDirection    m_rankDirection;
+    typename Node::Vector     m_nodes;
+    typename Edge::Vector     m_edges;
+    typename Subgraph::Vector m_subgraphs;
+    RankDirection             m_rankDirection;
 };
 
 } // namespace report

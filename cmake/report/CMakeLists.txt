@@ -46,6 +46,7 @@ set( REPORTS_HEADERS
     ${REPORT_API_DIR}/report/colours.hxx
     ${REPORT_API_DIR}/report/linker.hpp
     ${REPORT_API_DIR}/report/renderer_html.hpp
+    ${REPORT_API_DIR}/report/renderer_html.tpp
     ${REPORT_API_DIR}/report/report.hpp
     ${REPORT_API_DIR}/report/reporter_id.hpp
     ${REPORT_API_DIR}/report/value.hpp
@@ -53,8 +54,6 @@ set( REPORTS_HEADERS
 
 set( REPORTS_SOURCE
     ${REPORT_SRC_DIR}/report/colours.cxx
-    ${REPORT_SRC_DIR}/report/renderer_html.cpp
-    ${REPORT_SRC_DIR}/report/value.cpp
 )
 
 add_library( report
@@ -69,6 +68,7 @@ target_include_directories( report PUBLIC ${REPORT_API_DIR} )
 link_boost( report system )
 link_boost( report filesystem )
 link_boost( report serialization )
+link_boost( report url )
 link_json( report )
 link_inja( report )
 link_common( report )

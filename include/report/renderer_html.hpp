@@ -35,6 +35,7 @@
 namespace report
 {
 
+template< typename Value >
 class HTMLRenderer
 {
 public:
@@ -57,17 +58,17 @@ public:
         };
 
         void add( Shortcut shortcut ) { m_shortcuts.emplace_back( std::move( shortcut ) ); }
-        const Shortcut::Vector& get() const { return m_shortcuts; }
+        const typename Shortcut::Vector& get() const { return m_shortcuts; }
 
     private:
-        Shortcut::Vector m_shortcuts;
+        typename Shortcut::Vector m_shortcuts;
     };
 
     HTMLRenderer( const boost::filesystem::path& templateDir, JavascriptShortcuts shortcuts, bool bClearTempFiles );
     ~HTMLRenderer();
 
-    void render( const Container& report, std::ostream& os );
-    void render( const Container& report, Linker& linker, std::ostream& os );
+    void render( const Container< Value >& report, std::ostream& os );
+    void render( const Container< Value >& report, Linker& linker, std::ostream& os );
 
 private:
     void*               m_pInja;
@@ -76,4 +77,8 @@ private:
 
 } // namespace report
 
+
+#include "renderer_html.tpp"
+
 #endif // GUARD_2023_October_19_renderer
+

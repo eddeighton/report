@@ -18,6 +18,9 @@
 //  NEGLIGENCE) OR STRICT LIABILITY, EVEN IF COPYRIGHT OWNERS ARE ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGES.
 
+#ifndef GUARD_2024_March_08_renderer_html
+#define GUARD_2024_March_08_renderer_html
+
 #include "report/renderer_html.hpp"
 #include "report/report.hpp"
 
@@ -334,6 +337,7 @@ std::string javascriptHREF( const URL& url )
     return os.str();
 }
 
+template< typename Value >
 void valueToJSON( Args& args, const Value& value, nlohmann::json& data )
 {
     std::optional< URL > urlOpt;
@@ -355,6 +359,7 @@ void valueToJSON( Args& args, const Value& value, nlohmann::json& data )
     data.push_back( os.str() );
 }
 
+template< typename Value >
 void graphValueToJSON( Args& args, const Value& value, const std::optional< Value >& bookmarkOpt, nlohmann::json& data )
 {
     std::ostringstream os;
@@ -392,7 +397,8 @@ void graphValueToJSON( Args& args, const Value& value, const std::optional< Valu
     data.push_back( os.str() );
 }
 
-void valueVectorToJSON( Args& args, const ValueVector& textVector, nlohmann::json& data )
+template< typename Value >
+void valueVectorToJSON( Args& args, const ValueVector< Value >& textVector, nlohmann::json& data )
 {
     for( const auto& text : textVector )
     {
@@ -422,7 +428,8 @@ bool addOptionalLink( Args& args, T& element, nlohmann::json& data )
     return false;
 }
 
-void renderLine( Args& args, const Line& line, std::ostream& os )
+template< typename Value >
+void renderLine( Args& args, const Line< Value >& line, std::ostream& os )
 {
     nlohmann::json data( { { "style", "multiline_default" },
                            { "elements", nlohmann::json::array() },
@@ -444,7 +451,8 @@ void renderLine( Args& args, const Line& line, std::ostream& os )
     args.inja.renderMultiLine( data, os );
 }
 
-void renderMultiline( Args& args, const Multiline& multiline, std::ostream& os )
+template< typename Value >
+void renderMultiline( Args& args, const Multiline< Value >& multiline, std::ostream& os )
 {
     nlohmann::json data( { { "style", "multiline_default" },
                            { "elements", nlohmann::json::array() },
@@ -453,6 +461,7 @@ void renderMultiline( Args& args, const Multiline& multiline, std::ostream& os )
                            { "colour", multiline.m_colour.str() },
                            { "background_colour", multiline.m_background_colour.str() },
                            { "bookmark", "" } } );
+
     addOptionalBookmark( args, multiline, data );
     if( addOptionalLink( args, multiline, data ) )
     {
@@ -467,9 +476,11 @@ void renderMultiline( Args& args, const Multiline& multiline, std::ostream& os )
     args.inja.renderMultiLine( data, os );
 }
 
-void renderContainer( Args& args, const Container& container, std::ostream& os );
+template< typename Value >
+void renderContainer( Args& args, const Container< Value >& container, std::ostream& os );
 
-void renderBranch( Args& args, const Branch& branch, std::ostream& os )
+template< typename Value >
+void renderBranch( Args& args, const Branch< Value >& branch, std::ostream& os )
 {
     nlohmann::json data( { { "style", "branch_default" },
                            { "has_bookmark", false },
@@ -490,7 +501,8 @@ void renderBranch( Args& args, const Branch& branch, std::ostream& os )
     args.inja.renderBranch( data, os );
 }
 
-void renderTable( Args& args, const Table& table, std::ostream& os )
+template< typename Value >
+void renderTable( Args& args, const Table< Value >& table, std::ostream& os )
 {
     nlohmann::json data( { { "headings", nlohmann::json::array() }, { "rows", nlohmann::json::array() } } );
 
@@ -513,7 +525,8 @@ void renderTable( Args& args, const Table& table, std::ostream& os )
     args.inja.renderTable( data, os );
 }
 
-void renderGraph( Args& args, const Graph& graph, std::ostream& os )
+template< typename Value >
+void renderGraph( Args& args, const Graph< Value >& graph, std::ostream& os )
 {
     using namespace std::string_literals;
 
@@ -654,7 +667,8 @@ void renderGraph( Args& args, const Graph& graph, std::ostream& os )
     args.inja.renderGraph( data, os );
 }
 
-void renderContainer( Args& args, const Container& container, std::ostream& os )
+template< typename Value >
+void renderContainer( Args& args, const Container< Value >& container, std::ostream& os )
 {
     using namespace report;
 
@@ -665,18 +679,19 @@ void renderContainer( Args& args, const Container& container, std::ostream& os )
         Args&         args;
         std::ostream& os;
 
-        void operator()( const Line& line ) const { renderLine( args, line, os ); }
-        void operator()( const Multiline& multiline ) const { renderMultiline( args, multiline, os ); }
-        void operator()( const Branch& branch ) const { renderBranch( args, branch, os ); }
-        void operator()( const Table& table ) const { renderTable( args, table, os ); }
-        void operator()( const Graph& graph ) const { renderGraph( args, graph, os ); }
+        void operator()( const Line< Value >& line ) const { renderLine( args, line, os ); }
+        void operator()( const Multiline< Value >& multiline ) const { renderMultiline( args, multiline, os ); }
+        void operator()( const Branch< Value >& branch ) const { renderBranch( args, branch, os ); }
+        void operator()( const Table< Value >& table ) const { renderTable( args, table, os ); }
+        void operator()( const Graph< Value >& graph ) const { renderGraph( args, graph, os ); }
     } visitor{ args, os };
 
     std::visit( visitor, container );
 }
 
+template< typename Value >
 void renderReport( Args&                                    args,
-                   const Container&                         container,
+                   const Container< Value >&                         container,
                    const HTMLRenderer::JavascriptShortcuts& shortcuts,
                    std::ostream&                            os )
 {
@@ -699,6 +714,7 @@ void renderReport( Args&                                    args,
 
 } // namespace
 
+template< typename Value >
 HTMLRenderer::HTMLRenderer( const boost::filesystem::path& templateDir,
                             JavascriptShortcuts            shortcuts,
                             bool                           bClearTempFiles )
@@ -706,21 +722,28 @@ HTMLRenderer::HTMLRenderer( const boost::filesystem::path& templateDir,
     , m_shortcuts( std::move( shortcuts ) )
 {
 }
+
+template< typename Value >
 HTMLRenderer::~HTMLRenderer()
 {
     delete reinterpret_cast< Inja* >( m_pInja );
 }
 
-void HTMLRenderer::render( const Container& report, std::ostream& os )
+template< typename Value >
+void HTMLRenderer::render( const Container< Value >& report, std::ostream& os )
 {
     Args args{ *reinterpret_cast< Inja* >( m_pInja ), nullptr };
     renderReport( args, report, m_shortcuts, os );
 }
 
-void HTMLRenderer::render( const Container& report, Linker& linker, std::ostream& os )
+template< typename Value >
+void HTMLRenderer::render( const Container< Value >& report, Linker& linker, std::ostream& os )
 {
     Args args{ *reinterpret_cast< Inja* >( m_pInja ), &linker };
     renderReport( args, report, m_shortcuts, os );
 }
 
 } // namespace report
+
+
+#endif //GUARD_2024_March_08_renderer_html

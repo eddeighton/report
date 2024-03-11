@@ -25,49 +25,14 @@
 #include <string>
 #include <sstream>
 #include <memory>
+#include <vector>
 
 namespace report
 {
 
-struct ValueBase
-{
-    struct IValue
-    {
-        virtual ~IValue() = default;
-        virtual void print( std::ostream& os ) = 0;
-        virtual void load( std::istream& is ) = 0;
-    };
+// using Value = std::variant< int, std::string >;
 
-    template< typename T >
-    struct IValueImpl : public IValue
-    {
-        T m_value;
-        virtual void print( std::ostream& os )
-        {
-            os << m_value;
-        }
-        virtual void load( std::istream& is )
-        {
-            is >> m_value;
-        }
-    };
-
-    using IValuePtr = std::unique_ptr< IValue >;
-
-    template< typename T >
-    ValueBase( T value )
-        :   m_pValue{ std::make_unique< T >( std::move( value ) ) }
-    {
-
-    }
-
-
-    IValuePtr m_pValue;
-};
-
-
-using Value = std::variant< int, std::string >;
-
+template< typename Value >
 inline std::string toString( const Value& value )
 {
     std::ostringstream osValue;
@@ -75,6 +40,9 @@ inline std::string toString( const Value& value )
     return osValue.str();
 }
 
+
+template< typename Value >
+using ValueVector = std::vector< Value >;
 
 }
 

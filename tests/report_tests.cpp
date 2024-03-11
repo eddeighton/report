@@ -23,5 +23,26 @@
 
 TEST( Report, Basic )
 {
-    ASSERT_TRUE( true );
+    using namespace std::string_literals;
+
+    enum Foobar
+    {
+        eOne,
+        eTwo
+    };
+
+    using V = std::variant< int, std::string, Foobar >;
+
+    using namespace report;
+
+    using Cont = Container< V >;
+
+
+    Cont c = Branch< V >
+    {
+        { "Testing"s }
+    };
+
+
+
 }
