@@ -21,17 +21,14 @@
 #ifndef GUARD_2024_March_08_renderer_html
 #define GUARD_2024_March_08_renderer_html
 
-#include "report/renderer_html.hpp"
-#include "report/report.hpp"
+#include "report/html_template_engine.hpp"
 
 #include "common/process.hpp"
 #include "common/file.hpp"
 #include "common/string.hpp"
 #include "common/assert_verify.hpp"
 
-#include "inja/inja.hpp"
-#include "inja/environment.hpp"
-#include "inja/template.hpp"
+#include <nlohmann/json.hpp>
 
 #include "boost/filesystem.hpp"
 #include <boost/algorithm/string.hpp>
@@ -41,174 +38,9 @@
 
 namespace report
 {
-namespace
+
+namespace detail
 {
-
-class Inja
-{
-    ::inja::Environment     m_injaEnvironment;
-    boost::filesystem::path m_tempFolder;
-    bool                    m_bClearTempFiles;
-
-    enum TemplateType
-    {
-        eReport,
-        eMultiLine,
-        eBranch,
-        eTable,
-        eGraph,
-        TOTAL_TEMPLATE_TYPES
-    };
-
-    std::array< std::string, TOTAL_TEMPLATE_TYPES >      m_templateNames;
-    std::array< ::inja::Template, TOTAL_TEMPLATE_TYPES > m_templates;
-
-    void renderTemplate( const nlohmann::json& data, TemplateType templateType, std::ostream& os )
-    {
-        try
-        {
-            m_injaEnvironment.render_to( os, m_templates[ templateType ], data );
-        }
-        catch( ::inja::RenderError& ex )
-        {
-            THROW_RTE( "Inja Exception rendering template: " << m_templateNames[ templateType ]
-                                                             << " error: " << ex.what() );
-        }
-        catch( std::exception& ex )
-        {
-            THROW_RTE( "Exception rendering template: " << m_templateNames[ templateType ] << " error: " << ex.what() );
-        }
-    }
-
-public:
-    Inja( const boost::filesystem::path& templateDir, bool bClearTempFiles )
-        : m_templateNames{ "report.jinja", "multiline.jinja", "branch.jinja", "table.jinja", "graph.jinja" }
-        , m_tempFolder( boost::filesystem::temp_directory_path() / "graphs" / common::uuid() )
-        , m_bClearTempFiles( bClearTempFiles )
-    {
-        boost::filesystem::create_directories( m_tempFolder );
-        VERIFY_RTE_MSG(
-            boost::filesystem::exists( m_tempFolder ), "Failed to create temporary folder: " << m_tempFolder.string() );
-
-        m_injaEnvironment.set_trim_blocks( true );
-        for( int i = 0; i != TOTAL_TEMPLATE_TYPES; ++i )
-        {
-            const auto templateType = static_cast< TemplateType >( i );
-            auto       templatePath = templateDir / m_templateNames[ templateType ];
-            VERIFY_RTE_MSG( boost::filesystem::exists( templatePath ),
-                            "Failed to locate report template: " << templatePath.string() );
-            m_templates[ templateType ] = m_injaEnvironment.parse_template( templatePath.string() );
-        }
-    }
-
-    ~Inja()
-    {
-        if( m_bClearTempFiles )
-        {
-            boost::filesystem::remove_all( m_tempFolder );
-        }
-    }
-
-    void renderReport( const nlohmann::json& data, std::ostream& os ) { renderTemplate( data, eReport, os ); }
-
-    void renderMultiLine( const nlohmann::json& data, std::ostream& os )
-    {
-        //
-        renderTemplate( data, eMultiLine, os );
-    }
-
-    void renderBranch( const nlohmann::json& data, std::ostream& os )
-    {
-        //
-        renderTemplate( data, eBranch, os );
-    }
-
-    void renderTable( const nlohmann::json& data, std::ostream& os )
-    {
-        //
-        renderTemplate( data, eTable, os );
-    }
-
-    void renderGraph( const nlohmann::json& data, std::ostream& os )
-    {
-        std::ostringstream osDot;
-        renderTemplate( data, eGraph, osDot );
-
-        boost::filesystem::path tempDotFile = m_tempFolder / "temp.dot";
-        boost::filesystem::path tempSVGFile = m_tempFolder / "temp.svg";
-
-        // write the temporary file
-        {
-            auto pTempFile = boost::filesystem::createNewFileStream( tempDotFile );
-            *pTempFile << osDot.str();
-        }
-
-        std::ostringstream osCmd;
-        osCmd << "dot -Tsvg -o" << tempSVGFile.string() << " " << tempDotFile.string();
-
-        std::string strOutput, strError;
-        const int   iExitCode = common::runProcess( osCmd.str(), strOutput, strError );
-        VERIFY_RTE_MSG( strError.empty(), "Graphviz failed with error: " << strError );
-        VERIFY_RTE_MSG( strOutput.empty(), "Graphviz failed with output: " << strOutput );
-
-        // deal with annoying graphviz behaviour with how id is generated where it doesnt work as bookmark
-
-        std::string str;
-        {
-            boost::filesystem::loadAsciiFile( tempSVGFile, str );
-
-            static const std::string strSearch  = "<g id=\"a_";
-            static const std::string strReplace = "<text ";
-
-            using Iter = std::string::iterator;
-
-            for( Iter i = str.begin(), iEnd = str.end(); i != iEnd;
-                 i = std::search( i, iEnd, strSearch.begin(), strSearch.end() ) )
-            {
-                Iter r = std::search( i, iEnd, strReplace.begin(), strReplace.end() );
-                if( r != iEnd )
-                {
-                    Iter idStart    = i + 2; // NOTE: include the space before the id=
-                    int  quoteCount = 0;
-
-                    // find the end of the id="something" by counting the quotes
-                    Iter idEnd = idStart;
-                    for( ; ( idEnd != iEnd ) && ( quoteCount != 2 ); )
-                    {
-                        if( *idEnd == '\"' )
-                        {
-                            ++quoteCount;
-                        }
-                        ++idEnd;
-                    }
-
-                    // want to move the id string to 5 chars after r ( ignore the space )
-                    Iter newID = r + 6;
-
-                    // move ( idStart to idEnd ) to newID
-                    std::string strTemp( idStart, idEnd );
-                    boost::replace_all( strTemp, "\"a_", "  \"" );
-
-                    auto iNewIDStart = std::copy( idEnd, newID, idStart );
-                    std::copy( strTemp.begin(), strTemp.end(), iNewIDStart );
-                }
-            }
-        }
-        os << str;
-    }
-
-    std::string render( const std::string& strTemplate, const nlohmann::json& data )
-    {
-        try
-        {
-            return m_injaEnvironment.render( strTemplate, data );
-        }
-        catch( inja::InjaError& ex )
-        {
-            THROW_RTE( "inja::InjaError in CodeGenerator::render rendering: " << ex.what() );
-        }
-    }
-};
 
 std::string escapeHTML( std::string data )
 {
@@ -220,76 +52,6 @@ std::string escapeHTML( std::string data )
     replace_all( data, ">", "&gt;" );
     return data;
 }
-
-int javascriptKeyCode( char c )
-{
-    // clang-format off
-    switch( c )
-    {
-        case 'A': return 65;
-        case 'B': return 66;
-        case 'C': return 67;
-        case 'D': return 68;
-        case 'E': return 69;
-        case 'F': return 70;
-        case 'G': return 71;
-        case 'H': return 72;
-        case 'I': return 73;
-        case 'J': return 74;
-        case 'K': return 75;
-        case 'L': return 76;
-        case 'M': return 77;
-        case 'N': return 78;
-        case 'O': return 79;
-        case 'P': return 80;
-        case 'Q': return 81;
-        case 'R': return 82;
-        case 'S': return 83;
-        case 'T': return 84;
-        case 'U': return 85;
-        case 'V': return 86;
-        case 'W': return 87;
-        case 'X': return 88;
-        case 'Y': return 89;
-        case 'Z': return 90;
-        
-        case 'a': return 97;
-        case 'b': return 98;
-        case 'c': return 99;
-        case 'd': return 100;
-        case 'e': return 101;
-        case 'f': return 102;
-        case 'g': return 103;
-        case 'h': return 104;
-        case 'i': return 105;
-        case 'j': return 106;
-        case 'k': return 107;
-        case 'l': return 108;
-        case 'm': return 109;
-        case 'n': return 110;
-        case 'o': return 111;
-        case 'p': return 112;
-        case 'q': return 113;
-        case 'r': return 114;
-        case 's': return 115;
-        case 't': return 116;
-        case 'u': return 117;
-        case 'v': return 118;
-        case 'w': return 119;
-        case 'x': return 120;
-        case 'y': return 121;
-        case 'z': return 122;
-    default:
-        THROW_RTE( "Unknown javascript keycode: " << c );
-    }
-    // clang-format on
-}
-
-struct Args
-{
-    Inja&   inja;
-    Linker* pLinker = nullptr;
-};
 
 std::string javascriptHREF( const URL& url )
 {
@@ -337,14 +99,15 @@ std::string javascriptHREF( const URL& url )
     return os.str();
 }
 
-template< typename Value >
-void valueToJSON( Args& args, const Value& value, nlohmann::json& data )
+template < typename Value >
+void valueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
 {
     std::optional< URL > urlOpt;
-    if( args.pLinker )
+
+    /*if( engine.pLinker )
     {
-        urlOpt = args.pLinker->link( value );
-    }
+        urlOpt = engine.pLinker->link( value );
+    }*/
 
     std::ostringstream os;
     if( urlOpt.has_value() )
@@ -359,18 +122,47 @@ void valueToJSON( Args& args, const Value& value, nlohmann::json& data )
     data.push_back( os.str() );
 }
 
-template< typename Value >
-void graphValueToJSON( Args& args, const Value& value, const std::optional< Value >& bookmarkOpt, nlohmann::json& data )
+template < typename Value >
+void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
 {
     std::ostringstream os;
 
     os << "<td";
 
     std::optional< URL > urlOpt;
-    if( args.pLinker )
+    /*if( engine.pLinker )
     {
-        urlOpt = args.pLinker->link( value );
+        urlOpt = engine.pLinker->link( value );
+    }*/
+
+    /*if( urlOpt.has_value() )
+    {
+        os << " href=\"" << javascriptHREF( urlOpt.value() ) << "\"><U>" << escapeHTML( toString( value ) )
+           << "</U></td>";
     }
+    else*/
+    {
+        os << ">" << escapeHTML( toString( value ) ) << "</td>";
+    }
+
+    data.push_back( os.str() );
+}
+
+template < typename Value >
+void graphValueToJSON( HTMLTemplateEngine&           engine,
+                       const Value&                  value,
+                       const std::optional< Value >& bookmarkOpt,
+                       nlohmann::json&               data )
+{
+    std::ostringstream os;
+
+    os << "<td";
+
+    std::optional< URL > urlOpt;
+    /*if( engine.pLinker )
+    {
+        urlOpt = engine.pLinker->link( value );
+    }*/
 
     if( bookmarkOpt.has_value() )
     {
@@ -384,12 +176,12 @@ void graphValueToJSON( Args& args, const Value& value, const std::optional< Valu
         }
     }
 
-    if( urlOpt.has_value() )
+    /*if( urlOpt.has_value() )
     {
         os << " href=\"" << javascriptHREF( urlOpt.value() ) << "\"><U>" << escapeHTML( toString( value ) )
            << "</U></td>";
     }
-    else
+    else*/
     {
         os << ">" << escapeHTML( toString( value ) ) << "</td>";
     }
@@ -397,17 +189,17 @@ void graphValueToJSON( Args& args, const Value& value, const std::optional< Valu
     data.push_back( os.str() );
 }
 
-template< typename Value >
-void valueVectorToJSON( Args& args, const ValueVector< Value >& textVector, nlohmann::json& data )
+template < typename Value >
+void valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& textVector, nlohmann::json& data )
 {
     for( const auto& text : textVector )
     {
-        valueToJSON( args, text, data );
+        valueToJSON( engine, text, data );
     }
 }
 
 template < typename T >
-void addOptionalBookmark( Args& args, T& element, nlohmann::json& data )
+void addOptionalBookmark( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
 {
     if( element.m_bookmark.has_value() )
     {
@@ -417,7 +209,7 @@ void addOptionalBookmark( Args& args, T& element, nlohmann::json& data )
 }
 
 template < typename T >
-bool addOptionalLink( Args& args, T& element, nlohmann::json& data )
+bool addOptionalLink( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
 {
     if( element.m_url.has_value() )
     {
@@ -428,8 +220,8 @@ bool addOptionalLink( Args& args, T& element, nlohmann::json& data )
     return false;
 }
 
-template< typename Value >
-void renderLine( Args& args, const Line< Value >& line, std::ostream& os )
+template < typename Value >
+void renderLine( HTMLTemplateEngine& engine, const Line< Value >& line, std::ostream& os )
 {
     nlohmann::json data( { { "style", "multiline_default" },
                            { "elements", nlohmann::json::array() },
@@ -438,21 +230,21 @@ void renderLine( Args& args, const Line< Value >& line, std::ostream& os )
                            { "colour", line.m_colour.str() },
                            { "background_colour", line.m_background_colour.str() },
                            { "bookmark", "" } } );
-    addOptionalBookmark( args, line, data );
-    if( addOptionalLink( args, line, data ) )
+    addOptionalBookmark( engine, line, data );
+    if( addOptionalLink( engine, line, data ) )
     {
-        Args noLinkerArgs{ args.inja, nullptr };
-        valueToJSON( noLinkerArgs, line.m_element, data[ "elements" ] );
+        // Args noLinkerArgs{ args.inja, nullptr };
+        valueToJSON( engine, line.m_element, data[ "elements" ] );
     }
     else
     {
-        valueToJSON( args, line.m_element, data[ "elements" ] );
+        valueToJSON( engine, line.m_element, data[ "elements" ] );
     }
-    args.inja.renderMultiLine( data, os );
+    engine.render( HTMLTemplateEngine::eMultiLine, data, os );
 }
 
-template< typename Value >
-void renderMultiline( Args& args, const Multiline< Value >& multiline, std::ostream& os )
+template < typename Value >
+void renderMultiline( HTMLTemplateEngine& engine, const Multiline< Value >& multiline, std::ostream& os )
 {
     nlohmann::json data( { { "style", "multiline_default" },
                            { "elements", nlohmann::json::array() },
@@ -462,25 +254,25 @@ void renderMultiline( Args& args, const Multiline< Value >& multiline, std::ostr
                            { "background_colour", multiline.m_background_colour.str() },
                            { "bookmark", "" } } );
 
-    addOptionalBookmark( args, multiline, data );
-    if( addOptionalLink( args, multiline, data ) )
+    addOptionalBookmark( engine, multiline, data );
+    if( addOptionalLink( engine, multiline, data ) )
     {
-        Args noLinkerArgs{ args.inja, nullptr };
-        valueVectorToJSON( noLinkerArgs, multiline.m_elements, data[ "elements" ] );
+        // Args noLinkerArgs{ args.inja, nullptr };
+        valueVectorToJSON( engine, multiline.m_elements, data[ "elements" ] );
     }
     else
     {
-        valueVectorToJSON( args, multiline.m_elements, data[ "elements" ] );
+        valueVectorToJSON( engine, multiline.m_elements, data[ "elements" ] );
     }
 
-    args.inja.renderMultiLine( data, os );
+    engine.render( HTMLTemplateEngine::eMultiLine, data, os );
 }
 
-template< typename Value >
-void renderContainer( Args& args, const Container< Value >& container, std::ostream& os );
+template < typename Value >
+void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os );
 
-template< typename Value >
-void renderBranch( Args& args, const Branch< Value >& branch, std::ostream& os )
+template < typename Value >
+void renderBranch( HTMLTemplateEngine& engine, const Branch< Value >& branch, std::ostream& os )
 {
     nlohmann::json data( { { "style", "branch_default" },
                            { "has_bookmark", false },
@@ -488,27 +280,27 @@ void renderBranch( Args& args, const Branch< Value >& branch, std::ostream& os )
                            { "label", nlohmann::json::array() },
                            { "elements", nlohmann::json::array() } } );
 
-    addOptionalBookmark( args, branch, data );
-    valueVectorToJSON( args, branch.m_label, data[ "label" ] );
+    addOptionalBookmark( engine, branch, data );
+    valueVectorToJSON( engine, branch.m_label, data[ "label" ] );
 
     for( const auto& pChildElement : branch.m_elements )
     {
         std::ostringstream osChild;
-        renderContainer( args, pChildElement, osChild );
+        renderContainer( engine, pChildElement, osChild );
         data[ "elements" ].push_back( osChild.str() );
     }
 
-    args.inja.renderBranch( data, os );
+    engine.render( HTMLTemplateEngine::eBranch, data, os );
 }
 
-template< typename Value >
-void renderTable( Args& args, const Table< Value >& table, std::ostream& os )
+template < typename Value >
+void renderTable( HTMLTemplateEngine& engine, const Table< Value >& table, std::ostream& os )
 {
     nlohmann::json data( { { "headings", nlohmann::json::array() }, { "rows", nlohmann::json::array() } } );
 
     if( !table.m_headings.empty() )
     {
-        valueVectorToJSON( args, table.m_headings, data[ "headings" ] );
+        valueVectorToJSON( engine, table.m_headings, data[ "headings" ] );
     }
     for( const auto& pRow : table.m_rows )
     {
@@ -516,17 +308,17 @@ void renderTable( Args& args, const Table< Value >& table, std::ostream& os )
         for( const auto pContainer : pRow )
         {
             std::ostringstream osChild;
-            renderContainer( args, pContainer, osChild );
+            renderContainer( engine, pContainer, osChild );
             row[ "values" ].push_back( osChild.str() );
         }
         data[ "rows" ].push_back( row );
     }
 
-    args.inja.renderTable( data, os );
+    engine.render( HTMLTemplateEngine::eTable, data, os );
 }
 
-template< typename Value >
-void renderGraph( Args& args, const Graph< Value >& graph, std::ostream& os )
+template < typename Value >
+void renderGraph( HTMLTemplateEngine& engine, const Graph< Value >& graph, std::ostream& os )
 {
     using namespace std::string_literals;
 
@@ -559,10 +351,10 @@ void renderGraph( Args& args, const Graph< Value >& graph, std::ostream& os )
             nodeData[ "url" ]     = javascriptHREF( node.m_url.value() );
         }
 
-        // addOptionalBookmark( args, node, nodeData );
+        // addOptionalBookmark( engine, node, nodeData );
 
         bool bFirst = true;
-        for( const ValueVector& row : node.m_rows )
+        for( const ValueVector< Value >& row : node.m_rows )
         {
             nlohmann::json rowData( { { "values", nlohmann::json::array() } } );
             for( const Value& value : row )
@@ -571,11 +363,11 @@ void renderGraph( Args& args, const Graph< Value >& graph, std::ostream& os )
                 if( bFirst )
                 {
                     bFirst = false;
-                    graphValueToJSON( args, value, node.m_bookmark, rowData[ "values" ] );
+                    graphValueToJSON( engine, value, node.m_bookmark, rowData[ "values" ] );
                 }
                 else
                 {
-                    graphValueToJSON( args, value, std::nullopt, rowData[ "values" ] );
+                    graphValueToJSON( engine, value, rowData[ "values" ] );
                 }
             }
             nodeData[ "rows" ].push_back( rowData );
@@ -610,15 +402,15 @@ void renderGraph( Args& args, const Graph< Value >& graph, std::ostream& os )
         }
 
         VERIFY_RTE_MSG( !subgraph.m_bookmark.has_value(), "Subgraph bookmark deprecated" );
-        // addOptionalBookmark( args, subgraph, subgraphData );
+        // addOptionalBookmark( engine, subgraph, subgraphData );
 
-        for( const ValueVector& row : subgraph.m_rows )
+        for( const ValueVector< Value >& row : subgraph.m_rows )
         {
             nlohmann::json rowData( { { "values", nlohmann::json::array() } } );
             for( const Value& value : row )
             {
                 // NOTE graph value generates <td>value</td> so can generate href in graphviz
-                graphValueToJSON( args, value, std::nullopt, rowData[ "values" ] );
+                graphValueToJSON( engine, value, rowData[ "values" ] );
                 subgraphData[ "has_label" ] = true;
             }
             subgraphData[ "rows" ].push_back( rowData );
@@ -657,18 +449,18 @@ void renderGraph( Args& args, const Graph< Value >& graph, std::ostream& os )
         {
             for( const auto& value : edge.m_label.value() )
             {
-                graphValueToJSON( args, value, std::nullopt, edgeData[ "label" ] );
+                graphValueToJSON( engine, value, edgeData[ "label" ] );
             }
         }
 
         data[ "edges" ].push_back( edgeData );
     }
 
-    args.inja.renderGraph( data, os );
+    engine.render( HTMLTemplateEngine::eGraph, data, os );
 }
 
-template< typename Value >
-void renderContainer( Args& args, const Container< Value >& container, std::ostream& os )
+template < typename Value >
+void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os )
 {
     using namespace report;
 
@@ -676,74 +468,56 @@ void renderContainer( Args& args, const Container< Value >& container, std::ostr
     {
         using result_type = void;
 
-        Args&         args;
+        HTMLTemplateEngine& engine;
+
         std::ostream& os;
 
-        void operator()( const Line< Value >& line ) const { renderLine( args, line, os ); }
-        void operator()( const Multiline< Value >& multiline ) const { renderMultiline( args, multiline, os ); }
-        void operator()( const Branch< Value >& branch ) const { renderBranch( args, branch, os ); }
-        void operator()( const Table< Value >& table ) const { renderTable( args, table, os ); }
-        void operator()( const Graph< Value >& graph ) const { renderGraph( args, graph, os ); }
-    } visitor{ args, os };
+        void operator()( const Line< Value >& line ) const { renderLine( engine, line, os ); }
+        void operator()( const Multiline< Value >& multiline ) const { renderMultiline( engine, multiline, os ); }
+        void operator()( const Branch< Value >& branch ) const { renderBranch( engine, branch, os ); }
+        void operator()( const Table< Value >& table ) const { renderTable( engine, table, os ); }
+        void operator()( const Graph< Value >& graph ) const { renderGraph( engine, graph, os ); }
+
+    } visitor{ engine, os };
 
     std::visit( visitor, container );
 }
 
-template< typename Value >
-void renderReport( Args&                                    args,
-                   const Container< Value >&                         container,
-                   const HTMLRenderer::JavascriptShortcuts& shortcuts,
-                   std::ostream&                            os )
+template < typename Value >
+void renderReport( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os )
 {
     std::ostringstream osContainer;
-    renderContainer( args, container, osContainer );
+    renderContainer( engine, container, osContainer );
     nlohmann::json report( { { "body", osContainer.str() }, { "reports", nlohmann::json::array() } } );
 
-    for( const auto& reporterID : shortcuts.get() )
-    {
-        std::string strChar;
-        strChar.push_back( reporterID.key );
-        nlohmann::json reporterIDData( { { "key_char", strChar },
-                                         { "key_code", javascriptKeyCode( reporterID.key ) },
-                                         { "name", reporterID.strAction } } );
-        report[ "reports" ].push_back( reporterIDData );
-    }
+    /*
+        for( const auto& reporterID : shortcuts.get() )
+        {
+            std::string strChar;
+            strChar.push_back( reporterID.key );
+            nlohmann::json reporterIDData( { { "key_char", strChar },
+                                             { "key_code", javascriptKeyCode( reporterID.key ) },
+                                             { "name", reporterID.strAction } } );
+            report[ "reports" ].push_back( reporterIDData );
+        }*/
 
-    args.inja.renderReport( report, os );
+    engine.render( HTMLTemplateEngine::eReport, report, os );
 }
 
-} // namespace
+} // namespace detail
 
-template< typename Value >
-HTMLRenderer::HTMLRenderer( const boost::filesystem::path& templateDir,
-                            JavascriptShortcuts            shortcuts,
-                            bool                           bClearTempFiles )
-    : m_pInja( new Inja( templateDir, bClearTempFiles ) )
-    , m_shortcuts( std::move( shortcuts ) )
+template < typename Value >
+void renderHTML( HTMLTemplateEngine& engine, const Container< Value >& report, std::ostream& os )
 {
+    detail::renderReport( engine, report, os );
 }
 
-template< typename Value >
-HTMLRenderer::~HTMLRenderer()
+template < typename Value, typename Linker >
+void renderHTML( HTMLTemplateEngine& engine, const Container< Value >& report, Linker& linker, std::ostream& os )
 {
-    delete reinterpret_cast< Inja* >( m_pInja );
-}
-
-template< typename Value >
-void HTMLRenderer::render( const Container< Value >& report, std::ostream& os )
-{
-    Args args{ *reinterpret_cast< Inja* >( m_pInja ), nullptr };
-    renderReport( args, report, m_shortcuts, os );
-}
-
-template< typename Value >
-void HTMLRenderer::render( const Container< Value >& report, Linker& linker, std::ostream& os )
-{
-    Args args{ *reinterpret_cast< Inja* >( m_pInja ), &linker };
-    renderReport( args, report, m_shortcuts, os );
+    detail::renderReport( engine, report, os );
 }
 
 } // namespace report
 
-
-#endif //GUARD_2024_March_08_renderer_html
+#endif // GUARD_2024_March_08_renderer_html

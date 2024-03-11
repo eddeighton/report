@@ -44,7 +44,8 @@ set( JINJA_TEMPLATES
 
 set( REPORTS_HEADERS
     ${REPORT_API_DIR}/report/colours.hxx
-    ${REPORT_API_DIR}/report/linker.hpp
+    ${REPORT_API_DIR}/report/html_template_engine.hpp
+    ${REPORT_API_DIR}/report/key_code.hpp
     ${REPORT_API_DIR}/report/renderer_html.hpp
     ${REPORT_API_DIR}/report/renderer_html.tpp
     ${REPORT_API_DIR}/report/report.hpp
@@ -54,6 +55,7 @@ set( REPORTS_HEADERS
 
 set( REPORTS_SOURCE
     ${REPORT_SRC_DIR}/report/colours.cxx
+    ${REPORT_SRC_DIR}/report/html_template_engine.cpp
 )
 
 add_library( report

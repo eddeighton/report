@@ -50,6 +50,8 @@ add_executable( report_tests ${REPORT_UNIT_TESTS} ${REPORT_TEST_DIR}/main_test_r
 # allow access to source folder for tests
 target_include_directories( report_tests PUBLIC ${REPORT_SRC_DIR})
 
+target_link_libraries( report_tests report )
+
 set_target_properties( report_tests PROPERTIES FOLDER tests/unit )
 
 link_boost( report_tests filesystem )

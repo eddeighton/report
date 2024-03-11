@@ -20,6 +20,9 @@
 #include <gtest/gtest.h>
 
 #include "report/report.hpp"
+#include "report/renderer_html.hpp"
+
+#include <sstream>
 
 TEST( Report, Basic )
 {
@@ -36,13 +39,18 @@ TEST( Report, Basic )
     using namespace report;
 
     using Cont = Container< V >;
+    using CV   = ContainerVector< V >;
+    using VV   = ValueVector< V >;
 
+    Cont c = Branch{
+        VV{ "Testing"s }, CV{ Line{ V{ "TestLine"s } }, Line{ V{ "TestLine"s } }, Line{ V{ "TestLine"s } } } };
 
-    Cont c = Branch< V >
-    {
-        { "Testing"s }
-    };
+    using B = Branch< V >;
+    using L = Line< V >;
 
+    Cont c2 = B{ { "Testing"s }, { L{ "Test"s }, L{ "Test"s }, L{ "Test"s } } };
 
-
+    report::HTMLTemplateEngine templateEngine{ false };
+    std::ostringstream         os;
+    renderHTML( templateEngine, c, os );
 }

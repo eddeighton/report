@@ -39,9 +39,6 @@ namespace report
 using URL = boost::url;
 
 template < typename Value >
-class Link;
-
-template < typename Value >
 class Line;
 
 template < typename Value >
@@ -79,12 +76,30 @@ class Line
     }
 
 public:
+    using ValueType = Value;
+
     Value                  m_element;
     std::optional< URL >   m_url;
     std::optional< Value > m_bookmark;
     Colour                 m_colour            = Colour::black;
     Colour                 m_background_colour = Colour::white;
 };
+
+// Line deduction guide
+template < typename Value >
+Line( Value ) -> Line< Value >;
+
+template < typename Value >
+Line( Value, std::optional< URL > ) -> Line< Value >;
+
+template < typename Value >
+Line( Value, std::optional< URL >, std::optional< Value > ) -> Line< Value >;
+
+template < typename Value >
+Line( Value, std::optional< URL >, std::optional< Value >, Colour ) -> Line< Value >;
+
+template < typename Value >
+Line( Value, std::optional< URL >, std::optional< Value >, Colour, Colour ) -> Line< Value >;
 
 /***
     Multiline{ vec< Value >, opt< URL >, opt< Bookmark > }
@@ -102,12 +117,30 @@ class Multiline
     }
 
 public:
+    using ValueType = Value;
+
     ValueVector< Value >   m_elements;
     std::optional< URL >   m_url;
     std::optional< Value > m_bookmark;
     Colour                 m_colour            = Colour::black;
     Colour                 m_background_colour = Colour::white;
 };
+
+// Multiline deduction guide
+template < typename Value >
+Multiline( ValueVector< Value > ) -> Multiline< Value >;
+
+template < typename Value >
+Multiline( ValueVector< Value >, std::optional< URL > ) -> Multiline< Value >;
+
+template < typename Value >
+Multiline( ValueVector< Value >, std::optional< URL >, std::optional< Value > ) -> Multiline< Value >;
+
+template < typename Value >
+Multiline( ValueVector< Value >, std::optional< URL >, std::optional< Value >, Colour ) -> Multiline< Value >;
+
+template < typename Value >
+Multiline( ValueVector< Value >, std::optional< URL >, std::optional< Value >, Colour, Colour ) -> Multiline< Value >;
 
 /***
     Branch{ vec< Value >, vec< Container >, opt< Bookmark > }
@@ -125,10 +158,22 @@ class Branch
     }
 
 public:
+    using ValueType = Value;
+
     ValueVector< Value >     m_label;
     ContainerVector< Value > m_elements;
     std::optional< Value >   m_bookmark;
 };
+
+// Branch deduction guide
+template < typename Value >
+Branch( ValueVector< Value > label ) -> Branch< Value >;
+
+template < typename Value >
+Branch( ValueVector< Value >, ContainerVector< Value > ) -> Branch< Value >;
+
+template < typename Value >
+Branch( ValueVector< Value >, ContainerVector< Value >, std::optional< Value > ) -> Branch< Value >;
 
 /***
     Table{ vec< Value >, vec< vec< Container > > }
@@ -147,9 +192,18 @@ class Table
     }
 
 public:
-    std::vector< Value >                    m_headings;
+    using ValueType = Value;
+
+    ValueVector< Value >                    m_headings;
     std::vector< ContainerVector< Value > > m_rows;
 };
+
+// Table deduction guide
+template < typename Value >
+Table( ValueVector< Value > label ) -> Table< Value >;
+
+template < typename Value >
+Table( ValueVector< Value >, std::vector< ContainerVector< Value > > ) -> Table< Value >;
 
 /***
     Graph{ vec< Node >, vec< Edge > }
@@ -173,6 +227,8 @@ class Graph
     }
 
 public:
+    using ValueType = Value;
+
     class RankDirection
     {
     public:

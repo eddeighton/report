@@ -21,62 +21,24 @@
 #ifndef GUARD_2023_October_19_renderer
 #define GUARD_2023_October_19_renderer
 
-#include "reporter_id.hpp"
-#include "linker.hpp"
 #include "report.hpp"
 
-#include "common/serialisation.hpp"
-
-#include <boost/filesystem/path.hpp>
-
 #include <ostream>
-#include <vector>
 
 namespace report
 {
 
+class HTMLTemplateEngine;
+
 template< typename Value >
-class HTMLRenderer
-{
-public:
-    struct JavascriptShortcuts
-    {
-        friend class boost::serialization::access;
-        template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
-        {
-            archive& boost::serialization::make_nvp( "shortcuts", m_shortcuts );
-        }
+void renderHTML( HTMLTemplateEngine& engine, const Container< Value >& report, std::ostream& os );
 
-    public:
-        struct Shortcut
-        {
-            std::string strAction;
-            char        key;
+// std::optional< boost::url > linker( const Value& value ) 
 
-            using Vector = std::vector< Shortcut >;
-        };
-
-        void add( Shortcut shortcut ) { m_shortcuts.emplace_back( std::move( shortcut ) ); }
-        const typename Shortcut::Vector& get() const { return m_shortcuts; }
-
-    private:
-        typename Shortcut::Vector m_shortcuts;
-    };
-
-    HTMLRenderer( const boost::filesystem::path& templateDir, JavascriptShortcuts shortcuts, bool bClearTempFiles );
-    ~HTMLRenderer();
-
-    void render( const Container< Value >& report, std::ostream& os );
-    void render( const Container< Value >& report, Linker& linker, std::ostream& os );
-
-private:
-    void*               m_pInja;
-    JavascriptShortcuts m_shortcuts;
-};
+template< typename Value, typename Linker >
+void renderHTML( HTMLTemplateEngine& engine, const Container< Value >& report, Linker& linker, std::ostream& os );
 
 } // namespace report
-
 
 #include "renderer_html.tpp"
 
