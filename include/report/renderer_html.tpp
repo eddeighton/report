@@ -21,7 +21,6 @@
 #ifndef GUARD_2024_March_08_renderer_html
 #define GUARD_2024_March_08_renderer_html
 
-#include "report/html_template_engine.hpp"
 
 #include "common/process.hpp"
 #include "common/file.hpp"
@@ -506,16 +505,30 @@ void renderReport( HTMLTemplateEngine& engine, const Container< Value >& contain
 
 } // namespace detail
 
-template < typename Value >
-void renderHTML( HTMLTemplateEngine& engine, const Container< Value >& report, std::ostream& os )
+template< typename Value >
+void renderHTML( const Container< Value >& report, std::ostream& os, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
 }
 
-template < typename Value, typename Linker >
-void renderHTML( HTMLTemplateEngine& engine, const Container< Value >& report, Linker& linker, std::ostream& os )
+template< typename Value, typename Linker >
+void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
+}
+
+template< typename Value >
+void renderHTML( const Container< Value >& report, std::ostream& os )
+{
+    HTMLTemplateEngine engine{ false };
+    renderHTML( report, os, engine );
+}
+
+template< typename Value, typename Linker >
+void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker )
+{
+    HTMLTemplateEngine engine{ false };
+    renderHTML( report, os, linker, engine );
 }
 
 } // namespace report

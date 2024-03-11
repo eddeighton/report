@@ -3,15 +3,19 @@
 
 #include "edsUnitTestWrapper.hpp"
 
+#include "common/backtrace.hpp"
+#include "common/assert_verify.hpp"
+
 #include <gtest/gtest.h>
 
 #include <boost/program_options.hpp>
 #include <boost/stacktrace.hpp>
+#include <boost/filesystem.hpp>
 
 #include <iostream>
 #include <memory>
 
-#include "common/backtrace.hpp"
+boost::filesystem::path g_resultDir;
 
 void on_terminate()
 {
@@ -20,18 +24,21 @@ void on_terminate()
     std::abort();
 }
 
-int inner_main(int argc, char* argv[])
+int inner_main( int argc, char* argv[] )
 {
     std::set_terminate( on_terminate );
 
     common::disableDebugErrorPrompts();
 
     std::string strFilter, strXSL;
-    int iRepeats = 1;
-    bool bWait = false, bDebug = false, bReport = false, bCOut = false, bBreak = false;
+    int         iRepeats = 1;
+    bool        bWait = false, bDebug = false, bReport = false, bCOut = false, bBreak = false;
+
+    std::string strResultDir;
 
     namespace bpo = boost::program_options;
-    boost::program_options::options_description desc("Allowed options");
+    boost::program_options::options_description desc( "Allowed options" );
+    // clang-format off
     desc.add_options()
         ("help", "produce help message")
         ("filter",      bpo::value< std::string >( &strFilter ), "filter string to select subset of tests")
@@ -43,13 +50,17 @@ int inner_main(int argc, char* argv[])
         ("debug",       bpo::value< bool >( &bDebug )->implicit_value( true ),           "enable debugging")
         ("break",       bpo::value< bool >( &bBreak )->implicit_value( true ),           "break at startup to enable attaching debugger" )
         ("cout",        bpo::value< bool >( &bCOut )->implicit_value( true ),            "display standard output")
+
+        ("result_dir",  bpo::value< std::string >( &strResultDir),   "Directory to generate results" )
     ;
+    // clang-format on
 
     boost::program_options::variables_map vm;
-    boost::program_options::store( boost::program_options::parse_command_line( argc, argv, desc), vm);
+    boost::program_options::store( boost::program_options::parse_command_line( argc, argv, desc ), vm );
     boost::program_options::notify( vm );
 
-    if ( vm.count("help") ) {
+    if( vm.count( "help" ) )
+    {
         std::cout << desc << "\n";
         return 1;
     }
@@ -60,6 +71,11 @@ int inner_main(int argc, char* argv[])
         std::cin >> c;
     }
 
+    {
+        g_resultDir = strResultDir;
+        VERIFY_RTE_MSG( boost::filesystem::exists( g_resultDir ), "File not found result at : " << g_resultDir.string() );
+    }
+
     std::size_t szResult = 0U;
 
     iRepeats = std::max< int >( 1, iRepeats );
@@ -67,9 +83,10 @@ int inner_main(int argc, char* argv[])
     std::unique_ptr< EDUTS::UnitTestResultWrapper > results;
     try
     {
-        EDUTS::UnitTestWrapper test( EDUTS::UnitTestOptions( bDebug, bReport, iRepeats, strFilter.c_str(), strXSL.c_str() ) );
+        EDUTS::UnitTestWrapper test(
+            EDUTS::UnitTestOptions( bDebug, bReport, iRepeats, strFilter.c_str(), strXSL.c_str() ) );
         szResult = test.run();
-        results = test.getResult();
+        results  = test.getResult();
     }
     catch( std::runtime_error& e )
     {
@@ -82,19 +99,23 @@ int inner_main(int argc, char* argv[])
         szResult = 1;
     }
 
-    //wait for UnitTestWrapper to restore standard output before we print
+    // wait for UnitTestWrapper to restore standard output before we print
     if( bCOut && results.get() )
     {
-        std::cout << "Settings" << "\n";
+        std::cout << "Settings"
+                  << "\n";
         while( const char* pszReportLine = results->getSettings() )
             std::cout << pszReportLine << "\n";
-        std::cout << "\nReport" << "\n";
+        std::cout << "\nReport"
+                  << "\n";
         while( const char* pszReportLine = results->getReport() )
             std::cout << pszReportLine;
-        std::cout << "\nStandard Output" << "\n";
+        std::cout << "\nStandard Output"
+                  << "\n";
         while( const char* pszReportLine = results->getStandardOut() )
             std::cout << pszReportLine << "\n";
-        std::cout << "\nStandard Error" << "\n";
+        std::cout << "\nStandard Error"
+                  << "\n";
         while( const char* pszReportLine = results->getStandardErr() )
             std::cout << pszReportLine << "\n";
     }
@@ -105,10 +126,10 @@ int inner_main(int argc, char* argv[])
         std::cin >> cWait;
     }
 
-	return szResult;
+    return szResult;
 }
 
-int main(int argc, char* argv[])
+int main( int argc, char* argv[] )
 {
     try
     {

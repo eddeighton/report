@@ -22,11 +22,10 @@
 #define GUARD_2023_October_17_reports
 
 #include "report/value.hpp"
+#include "report/url.hpp"
 #include "report/colours.hxx"
 
 #include "common/serialisation.hpp"
-
-#include <boost/url.hpp>
 
 #include <vector>
 #include <ostream>
@@ -35,8 +34,6 @@
 
 namespace report
 {
-
-using URL = boost::url;
 
 template < typename Value >
 class Line;

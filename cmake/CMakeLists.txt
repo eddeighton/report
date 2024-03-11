@@ -27,3 +27,4 @@ set_property(GLOBAL PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory( report )
 add_subdirectory( tests )
+add_subdirectory( bench_summary )

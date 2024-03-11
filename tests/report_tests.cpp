@@ -22,35 +22,118 @@
 #include "report/report.hpp"
 #include "report/renderer_html.hpp"
 
+#include "common/file.hpp"
+
 #include <sstream>
+
+extern boost::filesystem::path g_resultDir;
+
+enum Foobar
+{
+    eOne,
+    eTwo
+};
+std::ostream& operator<<( std::ostream& os, Foobar v )
+{
+    switch( v )
+    {
+        case eOne:
+            return os << "One";
+        case eTwo:
+            return os << "Two";
+        default:
+            THROW_RTE( "Unknown value of Foobar" );
+            return os;
+    }
+}
 
 TEST( Report, Basic )
 {
     using namespace std::string_literals;
-
-    enum Foobar
-    {
-        eOne,
-        eTwo
-    };
 
     using V = std::variant< int, std::string, Foobar >;
 
     using namespace report;
 
     using Cont = Container< V >;
-    using CV   = ContainerVector< V >;
-    using VV   = ValueVector< V >;
+    using B    = Branch< V >;
+    using L    = Line< V >;
+    using M    = Multiline< V >;
+    using T    = Table< V >;
+    using G    = Graph< V >;
 
-    Cont c = Branch{
-        VV{ "Testing"s }, CV{ Line{ V{ "TestLine"s } }, Line{ V{ "TestLine"s } }, Line{ V{ "TestLine"s } } } };
+    // clang-format off
+    Cont c =
+    B
+    { 
+        { "Report.Basic"s }, 
+        { 
+            L{ "T1"s }, 
+            B
+            { 
+                { "Nested"s }, 
+                { L{ "T2a"s }, L{ "T2b"s } } 
+            }, 
+            G
+            {
+                // nodes
+                { 
+                    { { { "Node1"s, eOne }, { 1, 2 } } },
+                    { { { "Node2"s, eTwo } } },
+                    { { { "Node3"s, eOne } } }  
+                },
+                // edges
+                {
+                    { 0, 1 },
+                    { 1, 2, Colour::red },
+                    { 2, 0, Colour::blue, G::Edge::Style::dotted }
+                },
+                // subgraphs
+                {
+                    {
+                        {},
+                        { 1, 2 }
+                    }
+                }
+            },
+            L{ "T3"s },
+            T{ { "H1"s, "H2"s, "H3"s },
+            {
+                { L{ 1 }, L{ 2 }, L{ eOne } },
+                { L{ 1 }, L{ 2 }, L{ eTwo } },
+                { L{ 1 }, L{ 2 }, L{ eOne } },
+                { L{ 1 }, L{ 2 }, L{ eTwo } }
+            }}
+        } 
+    };
+    // clang-format on
 
-    using B = Branch< V >;
-    using L = Line< V >;
+    std::ostringstream os;
+    renderHTML( c, os );
 
-    Cont c2 = B{ { "Testing"s }, { L{ "Test"s }, L{ "Test"s }, L{ "Test"s } } };
+    auto pFile = boost::filesystem::createNewFileStream( g_resultDir / "basic.html" );
+    *pFile << os.str();
+}
 
-    report::HTMLTemplateEngine templateEngine{ false };
-    std::ostringstream         os;
-    renderHTML( templateEngine, c, os );
+TEST( Report, Custom )
+{
+    using namespace std::string_literals;
+
+    using V = std::variant< int, std::string, Foobar >;
+
+    using namespace report;
+
+    using Cont = Container< V >;
+    using B    = Branch< V >;
+    using L    = Line< V >;
+
+    Cont c = B{ { "Report.Custom"s }, { L{ "T1"s }, B{ {}, { L{ "T2a"s }, L{ "T2b"s } } }, L{ "T3"s } } };
+
+    HTMLTemplateEngine templateEngine{ false };
+
+    std::ostringstream os;
+    renderHTML( c, os, templateEngine );
+
+    auto pFile = boost::filesystem::createNewFileStream( g_resultDir / "custom.html" );
+    *pFile << os.str();
 }

@@ -18,34 +18,42 @@
 //  NEGLIGENCE) OR STRICT LIABILITY, EVEN IF COPYRIGHT OWNERS ARE ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGES.
 
-#ifndef GUARD_2023_October_19_renderer
-#define GUARD_2023_October_19_renderer
-
-#include "report.hpp"
-#include "html_template_engine.hpp"
-
-#include <ostream>
+#include "report/url.hpp"
 
 namespace report
 {
 
-template< typename Value >
-void renderHTML( const Container< Value >& report, std::ostream& os );
+URL makeFileURL( const URL& url, const boost::filesystem::path& filePath )
+{
+    URL result = url;
+    result.params().set( "file", filePath.string() );
+    return result;
+}
 
-template< typename Value, typename Linker >
-void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker );
+std::optional< boost::filesystem::path > getFile( const URL& url )
+{
+    auto iFind = url.params().find( "file" );
+    if( iFind != url.params().end() )
+    {
+        if( ( *iFind ).has_value )
+        {
+            return ( *iFind ).value;
+        }
+    }
+    return {};
+}
 
-// std::optional< boost::url > linker( const Value& value ) 
-
-template< typename Value >
-void renderHTML( const Container< Value >& report, std::ostream& os, HTMLTemplateEngine& engine );
-
-template< typename Value, typename Linker >
-void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine );
+std::optional< std::string > getReportType( const URL& url )
+{
+    auto iFind = url.params().find( "report" );
+    if( iFind != url.params().end() )
+    {
+        if( ( *iFind ).has_value )
+        {
+            return ( *iFind ).value;
+        }
+    }
+    return {};
+}
 
 } // namespace report
-
-#include "renderer_html.tpp"
-
-#endif // GUARD_2023_October_19_renderer
-

@@ -18,34 +18,44 @@
 //  NEGLIGENCE) OR STRICT LIABILITY, EVEN IF COPYRIGHT OWNERS ARE ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGES.
 
-#ifndef GUARD_2023_October_19_renderer
-#define GUARD_2023_October_19_renderer
+#ifndef GUARD_2024_March_11_url
+#define GUARD_2024_March_11_url
 
-#include "report.hpp"
-#include "html_template_engine.hpp"
+#include "common/serialisation.hpp"
 
-#include <ostream>
+#include <boost/url.hpp>
 
 namespace report
 {
 
-template< typename Value >
-void renderHTML( const Container< Value >& report, std::ostream& os );
+using URL = boost::url;
 
-template< typename Value, typename Linker >
-void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker );
-
-// std::optional< boost::url > linker( const Value& value ) 
-
-template< typename Value >
-void renderHTML( const Container< Value >& report, std::ostream& os, HTMLTemplateEngine& engine );
-
-template< typename Value, typename Linker >
-void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine );
+URL                                      makeFileURL( const URL& url, const boost::filesystem::path& filePath );
+std::optional< std::string >             getReportType( const URL& url );
+std::optional< boost::filesystem::path > getFile( const URL& url );
 
 } // namespace report
 
-#include "renderer_html.tpp"
+namespace boost::serialization
+{
 
-#endif // GUARD_2023_October_19_renderer
+template < class Archive >
+inline void serialize( Archive& ar, report::URL& url, const unsigned int version )
+{
+    if constexpr( Archive::is_saving::value )
+    {
+        std::string view = url.buffer();
+        ar&         view;
+    }
 
+    if constexpr( Archive::is_loading::value )
+    {
+        std::string str;
+        ar&         str;
+        url = report::URL( str );
+    }
+}
+
+} // namespace boost::serialization
+
+#endif // GUARD_2024_March_11_url

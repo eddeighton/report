@@ -50,37 +50,35 @@ set( REPORTS_HEADERS
     ${REPORT_API_DIR}/report/renderer_html.tpp
     ${REPORT_API_DIR}/report/report.hpp
     ${REPORT_API_DIR}/report/reporter_id.hpp
+    ${REPORT_API_DIR}/report/url.hpp
     ${REPORT_API_DIR}/report/value.hpp
 )
 
 set( REPORTS_SOURCE
     ${REPORT_SRC_DIR}/report/colours.cxx
     ${REPORT_SRC_DIR}/report/html_template_engine.cpp
+    ${REPORT_SRC_DIR}/report/url.cpp
 )
 
-add_library( report
-    ${REPORTS_HEADERS}
-    ${REPORTS_SOURCE}
-)
+add_library( reportlib ${REPORTS_HEADERS} ${REPORTS_SOURCE} )
+add_library( Report::reportlib ALIAS reportlib )
 
-set_target_properties( report PROPERTIES FOLDER report )
+set_target_properties( reportlib PROPERTIES FOLDER reportlib )
 
-target_include_directories( report PUBLIC ${REPORT_API_DIR} )
+target_include_directories( reportlib PUBLIC ${REPORT_API_DIR} )
 
-link_boost( report system )
-link_boost( report filesystem )
-link_boost( report serialization )
-link_boost( report url )
-link_json( report )
-link_inja( report )
-link_common( report )
+link_boost( reportlib system )
+link_boost( reportlib filesystem )
+link_boost( reportlib serialization )
+link_boost( reportlib url )
+link_json( reportlib )
+link_inja( reportlib )
+link_common( reportlib )
 
 #################################################################
 #################################################################
 ## install everything
 install( FILES ${JINJA_TEMPLATES} DESTINATION templates )
 install( FILES ${REPORTS_HEADERS} DESTINATION include/report )
-install( TARGETS report EXPORT report DESTINATION bin)
+install( TARGETS reportlib EXPORT report DESTINATION bin)
 install( EXPORT report NAMESPACE Report:: FILE report-config.cmake DESTINATION share )
-
-install( TARGETS report DESTINATION bin)

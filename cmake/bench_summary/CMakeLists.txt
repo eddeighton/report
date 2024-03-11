@@ -37,40 +37,27 @@ include( ${WORKSPACE_ROOT_PATH}/thirdparty/inja/inja_include.cmake )
 include( ${WORKSPACE_ROOT_PATH}/src/common/common_include.cmake )
 
 include_directories( ${REPORT_API_DIR} )
-include_directories( ${REPORT_SRC_DIR} )
 
-set( REPORT_UNIT_TESTS
-	${REPORT_TEST_DIR}/report_tests.cpp
+set( BENCH_SUMMARY_SOURCE
+	${REPORT_SRC_DIR}/bench_summary/main.cpp
 	)
 
-enable_testing()
-
-add_executable( report_tests ${REPORT_UNIT_TESTS} ${REPORT_TEST_DIR}/main_test_runner.cpp )
+add_executable( bench_summary ${BENCH_SUMMARY_SOURCE}  )
 
 # allow access to source folder for tests
-target_include_directories( report_tests PUBLIC ${REPORT_SRC_DIR})
+target_include_directories( bench_summary PUBLIC ${REPORT_SRC_DIR})
 
-target_link_libraries( report_tests reportlib )
+target_link_libraries( bench_summary reportlib )
 
-set_target_properties( report_tests PROPERTIES FOLDER tests/unit )
+link_boost( bench_summary filesystem )
+link_boost( bench_summary system )
+link_boost( bench_summary date_time )
+link_boost( bench_summary program_options )
+link_boost( bench_summary iostreams )
+link_boost( bench_summary serialization )
+link_boost( bench_summary url )
+link_json( bench_summary )
+link_inja( bench_summary )
+link_common( bench_summary )
 
-link_boost( report_tests filesystem )
-link_boost( report_tests system )
-link_boost( report_tests date_time )
-link_boost( report_tests program_options )
-link_boost( report_tests iostreams )
-link_boost( report_tests serialization )
-link_boost( report_tests url )
-link_gtest( report_tests )
-link_json( report_tests )
-link_inja( report_tests )
-link_common( report_tests )
-
-gtest_add_tests( TARGET report_tests SOURCES ${REPORT_UNIT_TESTS} )
-
-install( TARGETS report_tests DESTINATION bin )
-
-add_custom_command( TARGET report_tests POST_BUILD 
-	COMMAND report_tests 
-	--result_dir ${REPORT_TEST_DIR}/result
-	WORKING_DIRECTORY ${REPORT_UNIT_TESTS_DIR} )
+install( TARGETS bench_summary DESTINATION bin )
