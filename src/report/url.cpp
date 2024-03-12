@@ -23,6 +23,11 @@
 namespace report
 {
 
+URL fromString( const std::string& str )
+{
+    return boost::urls::parse_origin_form( str ).value();
+}
+
 URL makeFileURL( const URL& url, const boost::filesystem::path& filePath )
 {
     URL result = url;

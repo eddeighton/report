@@ -41,7 +41,7 @@ namespace report
 namespace detail
 {
 
-std::string escapeHTML( std::string data )
+inline std::string escapeHTML( std::string data )
 {
     using boost::algorithm::replace_all;
     replace_all( data, "&", "&amp;" );
@@ -52,7 +52,7 @@ std::string escapeHTML( std::string data )
     return data;
 }
 
-std::string javascriptHREF( const URL& url )
+inline std::string javascriptHREF( const URL& url )
 {
     std::ostringstream os;
 
@@ -99,7 +99,7 @@ std::string javascriptHREF( const URL& url )
 }
 
 template < typename Value >
-void valueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
+inline void valueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
 {
     std::optional< URL > urlOpt;
 
@@ -122,7 +122,7 @@ void valueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json
 }
 
 template < typename Value >
-void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
+inline void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
 {
     std::ostringstream os;
 
@@ -148,7 +148,7 @@ void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann:
 }
 
 template < typename Value >
-void graphValueToJSON( HTMLTemplateEngine&           engine,
+inline void graphValueToJSON( HTMLTemplateEngine&           engine,
                        const Value&                  value,
                        const std::optional< Value >& bookmarkOpt,
                        nlohmann::json&               data )
@@ -189,7 +189,7 @@ void graphValueToJSON( HTMLTemplateEngine&           engine,
 }
 
 template < typename Value >
-void valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& textVector, nlohmann::json& data )
+inline void valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& textVector, nlohmann::json& data )
 {
     for( const auto& text : textVector )
     {
@@ -198,7 +198,7 @@ void valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& 
 }
 
 template < typename T >
-void addOptionalBookmark( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
+inline void addOptionalBookmark( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
 {
     if( element.m_bookmark.has_value() )
     {
@@ -208,7 +208,7 @@ void addOptionalBookmark( HTMLTemplateEngine& engine, T& element, nlohmann::json
 }
 
 template < typename T >
-bool addOptionalLink( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
+inline bool addOptionalLink( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
 {
     if( element.m_url.has_value() )
     {
@@ -220,7 +220,7 @@ bool addOptionalLink( HTMLTemplateEngine& engine, T& element, nlohmann::json& da
 }
 
 template < typename Value >
-void renderLine( HTMLTemplateEngine& engine, const Line< Value >& line, std::ostream& os )
+inline void renderLine( HTMLTemplateEngine& engine, const Line< Value >& line, std::ostream& os )
 {
     nlohmann::json data( { { "style", "multiline_default" },
                            { "elements", nlohmann::json::array() },
@@ -243,7 +243,7 @@ void renderLine( HTMLTemplateEngine& engine, const Line< Value >& line, std::ost
 }
 
 template < typename Value >
-void renderMultiline( HTMLTemplateEngine& engine, const Multiline< Value >& multiline, std::ostream& os )
+inline void renderMultiline( HTMLTemplateEngine& engine, const Multiline< Value >& multiline, std::ostream& os )
 {
     nlohmann::json data( { { "style", "multiline_default" },
                            { "elements", nlohmann::json::array() },
@@ -268,10 +268,10 @@ void renderMultiline( HTMLTemplateEngine& engine, const Multiline< Value >& mult
 }
 
 template < typename Value >
-void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os );
+inline void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os );
 
 template < typename Value >
-void renderBranch( HTMLTemplateEngine& engine, const Branch< Value >& branch, std::ostream& os )
+inline void renderBranch( HTMLTemplateEngine& engine, const Branch< Value >& branch, std::ostream& os )
 {
     nlohmann::json data( { { "style", "branch_default" },
                            { "has_bookmark", false },
@@ -293,7 +293,7 @@ void renderBranch( HTMLTemplateEngine& engine, const Branch< Value >& branch, st
 }
 
 template < typename Value >
-void renderTable( HTMLTemplateEngine& engine, const Table< Value >& table, std::ostream& os )
+inline void renderTable( HTMLTemplateEngine& engine, const Table< Value >& table, std::ostream& os )
 {
     nlohmann::json data( { { "headings", nlohmann::json::array() }, { "rows", nlohmann::json::array() } } );
 
@@ -317,7 +317,7 @@ void renderTable( HTMLTemplateEngine& engine, const Table< Value >& table, std::
 }
 
 template < typename Value >
-void renderGraph( HTMLTemplateEngine& engine, const Graph< Value >& graph, std::ostream& os )
+inline void renderGraph( HTMLTemplateEngine& engine, const Graph< Value >& graph, std::ostream& os )
 {
     using namespace std::string_literals;
 
@@ -459,7 +459,7 @@ void renderGraph( HTMLTemplateEngine& engine, const Graph< Value >& graph, std::
 }
 
 template < typename Value >
-void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os )
+inline void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os )
 {
     using namespace report;
 
@@ -483,7 +483,7 @@ void renderContainer( HTMLTemplateEngine& engine, const Container< Value >& cont
 }
 
 template < typename Value >
-void renderReport( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os )
+inline void renderReport( HTMLTemplateEngine& engine, const Container< Value >& container, std::ostream& os )
 {
     std::ostringstream osContainer;
     renderContainer( engine, container, osContainer );
@@ -506,26 +506,26 @@ void renderReport( HTMLTemplateEngine& engine, const Container< Value >& contain
 } // namespace detail
 
 template< typename Value >
-void renderHTML( const Container< Value >& report, std::ostream& os, HTMLTemplateEngine& engine )
+inline void renderHTML( const Container< Value >& report, std::ostream& os, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
 }
 
 template< typename Value, typename Linker >
-void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine )
+inline void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
 }
 
 template< typename Value >
-void renderHTML( const Container< Value >& report, std::ostream& os )
+inline void renderHTML( const Container< Value >& report, std::ostream& os )
 {
     HTMLTemplateEngine engine{ false };
     renderHTML( report, os, engine );
 }
 
 template< typename Value, typename Linker >
-void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker )
+inline void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker )
 {
     HTMLTemplateEngine engine{ false };
     renderHTML( report, os, linker, engine );

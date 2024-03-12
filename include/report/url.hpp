@@ -30,6 +30,7 @@ namespace report
 
 using URL = boost::url;
 
+URL                                      fromString( const std::string& str );
 URL                                      makeFileURL( const URL& url, const boost::filesystem::path& filePath );
 std::optional< std::string >             getReportType( const URL& url );
 std::optional< boost::filesystem::path > getFile( const URL& url );
