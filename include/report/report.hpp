@@ -222,25 +222,10 @@ class Plot
 
 public:
     using ValueType = Value;
-
-    struct Point
-    {
-        double x = 0.0, y = 0.0, z = 0.0;
-
-    private:
-        friend class boost::serialization::access;
-        template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
-        {
-            archive& x;
-            archive& y;
-            archive& z;
-        }
-    };
-    using Points = std::vector< Point >;
+    using Point     = ValueVector< Value >;
 
     ValueVector< Value > m_heading;
-    Points               m_points;
+    std::vector< Point > m_points;
 };
 
 /***

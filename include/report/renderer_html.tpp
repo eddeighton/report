@@ -325,10 +325,13 @@ inline void renderPlot( HTMLTemplateEngine& engine, const Plot< Value >& plot, s
 
     valueVectorToJSON( engine, plot.m_heading, data[ "headings" ] );
 
-    for( const auto& p : plot.m_points )
+    for( const auto& point : plot.m_points )
     {
-        nlohmann::json point( { { "x", p.x }, { "y", p.y }, { "z", p.z } } );
-        data[ "points" ].push_back( point );
+        nlohmann::json values( { { "values", nlohmann::json::array() } } );
+
+        valueVectorToJSON( engine, point, values[ "values" ] );
+
+        data[ "points" ].push_back( values );
     }
 
     engine.render( HTMLTemplateEngine::ePlot, data, os );

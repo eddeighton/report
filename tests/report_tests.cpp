@@ -27,6 +27,7 @@
 #include <sstream>
 
 extern boost::filesystem::path g_resultDir;
+extern boost::filesystem::path g_templateDir;
 
 enum Foobar
 {
@@ -51,7 +52,7 @@ TEST( Report, Basic )
 {
     using namespace std::string_literals;
 
-    using V = std::variant< int, std::string, Foobar >;
+    using V = std::variant< int, double, std::string, Foobar >;
 
     using namespace report;
 
@@ -61,6 +62,7 @@ TEST( Report, Basic )
     using M    = Multiline< V >;
     using T    = Table< V >;
     using P    = Plot< V >;
+    using Pt   = P::Point;
     using G    = Graph< V >;
 
     // clang-format off
@@ -78,43 +80,43 @@ TEST( Report, Basic )
                     P{ 
                         { "Plot"s, eOne },
                         {
-                            { 1.0,    5.24950377963947,       0.9551714702811733 },
-                            { 2.0,    0.2768319460690982,     0.8382228276034114 },
-                            { 3.0,    2.458300290671558,      0.8895984597901627 },
-                            { 4.0,    8.074619729546166,      0.9782991182740506 },
-                            { 5.0,    3.556050859987454,      0.20782711215965288 },
-                            { 6.0,    9.784662051855879,      0.860077659458399 },
-                            { 7.0,    0.06326750348053745,    0.9967392197895648 },
-                            { 8.0,    3.0619009840375355,     0.6224007291347622 },
-                            { 9.0,    4.712482948657854,      0.21916643920952317 },
-                            { 10.0,   5.785610242115469,      0.7715707285298565 },
-                            { 11.0,   0.5479191370529124,     0.46804506066713425 },
-                            { 12.0,   2.420990056711698,      0.3187367784785744 },
-                            { 13.0,   8.98839454120511,       0.30855732071536 },
-                            { 14.0,   5.567374627104407,      0.4805722704111337 },
-                            { 15.0,   4.073801044545135,      0.2338819569649706 },
-                            { 16.0,   5.848917306708272,      0.5470102787103681 }
+                            { 1,    5.24950377963947,       "testing1"s },
+                            { 2,    0.2768319460690982,     "testing2"s },
+                            { 3,    2.458300290671558,      "testing3"s },
+                            { 4,    8.074619729546166,      "testing4"s },
+                            { 5,    3.556050859987454,      "testing5"s },
+                            { 6,    9.784662051855879,      "testing6"s },
+                            { 7,    0.06326750348053745,    "testing7"s },
+                            { 8,    3.0619009840375355,     "testing8"s },
+                            { 9,    4.712482948657854,      "testing9"s },
+                            { 10,   5.785610242115469,      "testing10"s },
+                            { 11,   0.5479191370529124,     "testing11"s },
+                            { 12,   2.420990056711698,      "testing12"s },
+                            { 13,   8.98839454120511,       "testing13"s },
+                            { 14,   5.567374627104407,      "testing14"s },
+                            { 15,   4.073801044545135,      "testing15"s },
+                            { 16,   5.848917306708272,      "testing16"s }
                         }
                     }, 
                     P{ 
                         { "Plot"s, eTwo },
                         {
-                            { 1.0,    5.24950377963947,       0.9551714702811733 },
-                            { 2.0,    0.2768319460690982,     0.8382228276034114 },
-                            { 3.0,    2.458300290671558,      0.8895984597901627 },
-                            { 4.0,    8.074619729546166,      0.9782991182740506 },
-                            { 5.0,    3.556050859987454,      0.20782711215965288 },
-                            { 6.0,    9.784662051855879,      0.860077659458399 },
-                            { 7.0,    0.06326750348053745,    0.9967392197895648 },
-                            { 8.0,    3.0619009840375355,     0.6224007291347622 },
-                            { 9.0,    4.712482948657854,      0.21916643920952317 },
-                            { 10.0,   5.785610242115469,      0.7715707285298565 },
-                            { 11.0,   0.5479191370529124,     0.46804506066713425 },
-                            { 12.0,   2.420990056711698,      0.3187367784785744 },
-                            { 13.0,   8.98839454120511,       0.30855732071536 },
-                            { 14.0,   5.567374627104407,      0.4805722704111337 },
-                            { 15.0,   4.073801044545135,      0.2338819569649706 },
-                            { 16.0,   5.848917306708272,      0.5470102787103681 }
+                            { 1,    5.24950377963947,       "testing1" },
+                            { 2,    0.2768319460690982,     "testing2" },
+                            { 3,    2.458300290671558,      "testing3" },
+                            { 4,    8.074619729546166,      "testing4" },
+                            { 5,    3.556050859987454,      "testing5" },
+                            { 6,    9.784662051855879,      "testing6" },
+                            { 7,    0.06326750348053745,    "testing7" },
+                            { 8,    3.0619009840375355,     "testing8" },
+                            { 9,    4.712482948657854,      "testing9" },
+                            { 10,   5.785610242115469,      "testing10" },
+                            { 11,   0.5479191370529124,     "testing11" },
+                            { 12,   2.420990056711698,      "testing12" },
+                            { 13,   8.98839454120511,       "testing13" },
+                            { 14,   5.567374627104407,      "testing14" },
+                            { 15,   4.073801044545135,      "testing15" },
+                            { 16,   5.848917306708272,      "testing16" }
                         }
                     }
                 } 
@@ -154,31 +156,17 @@ TEST( Report, Basic )
     // clang-format on
 
     std::ostringstream os;
-    renderHTML( c, os );
+
+    if( g_templateDir.empty() )
+    {
+        renderHTML( c, os );
+    }
+    else
+    {
+        HTMLTemplateEngine templateEngine{ g_templateDir, false };
+        renderHTML( c, os, templateEngine );
+    }
 
     auto pFile = boost::filesystem::createNewFileStream( g_resultDir / "basic.html" );
-    *pFile << os.str();
-}
-
-TEST( Report, Custom )
-{
-    using namespace std::string_literals;
-
-    using V = std::variant< int, std::string, Foobar >;
-
-    using namespace report;
-
-    using Cont = Container< V >;
-    using B    = Branch< V >;
-    using L    = Line< V >;
-
-    Cont c = B{ { "Report.Custom"s }, { L{ "T1"s }, B{ {}, { L{ "T2a"s }, L{ "T2b"s } } }, L{ "T3"s } } };
-
-    HTMLTemplateEngine templateEngine{ false };
-
-    std::ostringstream os;
-    renderHTML( c, os, templateEngine );
-
-    auto pFile = boost::filesystem::createNewFileStream( g_resultDir / "custom.html" );
     *pFile << os.str();
 }

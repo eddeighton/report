@@ -79,9 +79,9 @@ Report makeSummaryReport( const ResultHistoryMap& results )
             //     "mhz_per_cpu": 2700,
             //     "cpu_scaling_enabled": true,
 
-            // const auto context = r[ "context" ];
+            const auto context = r[ "context" ];
             // const std::string hostName = context[ "hostname" ];
-            // const std::string date = context[ "date" ];
+            const std::string date = context[ "date" ];
 
             for( const auto& b : r[ "benchmarks" ] )
             {
@@ -106,20 +106,19 @@ Report makeSummaryReport( const ResultHistoryMap& results )
                 // "cpu_time": 2.4860354734344666e+04,
                 // "time_unit": "ns"
 
+                const double realTime = b[ "real_time" ];
+                const double cpuTime  = b[ "cpu_time" ];
+
                 auto iFind = plots.find( name );
                 if( iFind != plots.end() )
                 {
-                    Plot&       plot = iFind->second;
-                    Plot::Point pt{
-                        static_cast< double >( plot.m_points.size() ), b[ "real_time" ], b[ "iterations" ] };
-                    plot.m_points.push_back( pt );
+                    Plot& plot = iFind->second;
+                    plot.m_points.push_back(
+                        Plot::Point{ static_cast< int >( plot.m_points.size() ), realTime, date } );
                 }
                 else
                 {
-                    Plot        plot{ { name } };
-                    Plot::Point pt{
-                        static_cast< double >( plot.m_points.size() ), b[ "real_time" ], b[ "iterations" ] };
-                    plot.m_points.push_back( pt );
+                    Plot plot{ { name }, { Plot::Point{ 0, realTime, date } } };
                     plots.insert( { name, plot } );
                 }
             }

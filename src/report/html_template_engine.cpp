@@ -224,19 +224,28 @@ R"TEMPLATE(
 // plot template
 R"TEMPLATE(
 
-set terminal svg size 600,400 dynamic enhanced font 'arial,10' mousing name "plot" butt dashlength 1.0 
+set terminal svg size 600,400 dynamic enhanced font 'arial,10' mousing name "plot" dashlength 1.0 
 
 set output "plot.svg"
 
 set key fixed left top vertical Right noreverse enhanced autotitle box lt black linewidth 1.000 dashtype solid
 
-set title "{% for heading in headings %}{{ heading }} {% endfor %}" 
-set title  font ",20" textcolor lt -1 norotate
-set boxwidth 0.75 relative
-set style fill transparent solid 0.5
-set errorbars linecolor 'blue' linewidth 1.0 dashtype '.'
+set xlabel "Execution Date" 
+set ylabel "Benchmark Time ( ns )" 
 
-plot 'plot.dat' with boxerrorbars fc 'blue'
+set title "{% for heading in headings %}{{ heading }} {% endfor %}" 
+set title font ",20" textcolor lt -1 norotate
+
+set boxwidth 0.75 relative
+
+set style fill transparent solid 0.5
+
+set bars linecolor 'blue' linewidth 1.0 dashtype '.'
+
+plot 'plot.dat' with boxes fc 'blue', \
+    '' with labels hypertext
+
+
 
 )TEMPLATE",
 
@@ -445,7 +454,20 @@ void HTMLTemplateEngine::renderPlot( const nlohmann::json& data, std::ostream& o
         auto                    pDataFile    = boost::filesystem::createNewFileStream( tempDataFile );
         for( const auto& p : data[ "points" ] )
         {
-            *pDataFile << p[ "x" ] << " " << p[ "y" ] << " " << p[ "z" ] << "\n";
+            int iCount = 0;
+            for( const std::string& value : p[ "values" ] )
+            {
+                if( iCount < 2 )
+                {
+                    *pDataFile << value << " ";
+                }
+                else
+                {
+                    *pDataFile << '\"' << value << "\" ";
+                }
+                ++iCount;
+            }
+            *pDataFile << "\n";
         }
     }
 

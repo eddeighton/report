@@ -16,6 +16,7 @@
 #include <memory>
 
 boost::filesystem::path g_resultDir;
+boost::filesystem::path g_templateDir;
 
 void on_terminate()
 {
@@ -34,7 +35,7 @@ int inner_main( int argc, char* argv[] )
     int         iRepeats = 1;
     bool        bWait = false, bDebug = false, bReport = false, bCOut = false, bBreak = false;
 
-    std::string strResultDir;
+    std::string strResultDir, strTemplateDir;
 
     namespace bpo = boost::program_options;
     boost::program_options::options_description desc( "Allowed options" );
@@ -52,6 +53,7 @@ int inner_main( int argc, char* argv[] )
         ("cout",        bpo::value< bool >( &bCOut )->implicit_value( true ),            "display standard output")
 
         ("result_dir",  bpo::value< std::string >( &strResultDir),   "Directory to generate results" )
+        ("template_dir", bpo::value< std::string >( &strTemplateDir ), "Directory to custom reporting templates" )
     ;
     // clang-format on
 
@@ -73,7 +75,15 @@ int inner_main( int argc, char* argv[] )
 
     {
         g_resultDir = strResultDir;
-        VERIFY_RTE_MSG( boost::filesystem::exists( g_resultDir ), "File not found result at : " << g_resultDir.string() );
+        VERIFY_RTE_MSG(
+            boost::filesystem::exists( g_resultDir ), "File not found result at : " << g_resultDir.string() );
+    }
+
+    if( !strTemplateDir.empty() )
+    {
+        g_templateDir = strTemplateDir;
+        VERIFY_RTE_MSG(
+            boost::filesystem::exists( g_templateDir ), "File not found result at : " << g_templateDir.string() );
     }
 
     std::size_t szResult = 0U;
