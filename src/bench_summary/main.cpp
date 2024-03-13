@@ -30,6 +30,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <iostream>
 #include <sstream>
@@ -37,6 +38,8 @@
 
 namespace
 {
+using namespace std::string_literals;
+
 using Value = std::variant< double, int, std::string >;
 
 using URL    = report::URL;
@@ -50,6 +53,7 @@ using Branch    = report::Branch< Value >;
 using Line      = report::Line< Value >;
 using Multiline = report::Multiline< Value >;
 using Table     = report::Table< Value >;
+using Plot      = report::Plot< Value >;
 using Graph     = report::Graph< Value >;
 
 using ResultHistory    = std::vector< nlohmann::json >;
@@ -57,25 +61,77 @@ using ResultHistoryMap = std::map< std::string, ResultHistory >;
 
 Report makeSummaryReport( const ResultHistoryMap& results )
 {
-    Branch report;
+    Branch report{ { "Benchmark Summary Report"s } };
 
     for( const auto& [ benchmark, resultSequence ] : results )
     {
         Branch branch{ { benchmark } };
 
-        for( const auto r : resultSequence )
-        {
-            for( const auto b : r[ "benchmarks" ] )
-            {
+        std::map< std::string, Plot > plots;
 
+        for( const auto& r : resultSequence )
+        {
+            // "context": {
+            //     "date": "2024-03-13T02:01:32+00:00",
+            //     "host_name": "reddwarf",
+            //     "executable": "/build/linux_gcc_static_retail/search/build/bench/benchmarks",
+            //     "num_cpus": 12,
+            //     "mhz_per_cpu": 2700,
+            //     "cpu_scaling_enabled": true,
+
+            // const auto context = r[ "context" ];
+            // const std::string hostName = context[ "hostname" ];
+            // const std::string date = context[ "date" ];
+
+            for( const auto& b : r[ "benchmarks" ] )
+            {
+                std::string name = b[ "name" ];
+                {
+                    using boost::algorithm::replace_all;
+                    replace_all( name, "_", " " );
+                }
+
+                VERIFY_RTE( !name.empty() );
+
+                // "name": "BM_3By3By1_Line3_3Deep",
+                // "family_index": 0,
+                // "per_family_instance_index": 0,
+                // "run_name": "BM_3By3By1_Line3_3Deep",
+                // "run_type": "iteration",
+                // "repetitions": 1,
+                // "repetition_index": 0,
+                // "threads": 1,
+                // "iterations": 27818,
+                // "real_time": 2.4927432705488449e+04,
+                // "cpu_time": 2.4860354734344666e+04,
+                // "time_unit": "ns"
+
+                auto iFind = plots.find( name );
+                if( iFind != plots.end() )
+                {
+                    Plot&       plot = iFind->second;
+                    Plot::Point pt{
+                        static_cast< double >( plot.m_points.size() ), b[ "real_time" ], b[ "iterations" ] };
+                    plot.m_points.push_back( pt );
+                }
+                else
+                {
+                    Plot        plot{ { name } };
+                    Plot::Point pt{
+                        static_cast< double >( plot.m_points.size() ), b[ "real_time" ], b[ "iterations" ] };
+                    plot.m_points.push_back( pt );
+                    plots.insert( { name, plot } );
+                }
             }
         }
 
+        for( const auto& [ _, plot ] : plots )
+        {
+            branch.m_elements.push_back( std::move( plot ) );
+        }
 
-
-        report.m_elements.emplace_back( std::move( branch ) );
+        report.m_elements.push_back( std::move( branch ) );
     }
-
 
     return report;
 }
@@ -180,7 +236,7 @@ int main( int argc, const char* argv[] )
                 {
                     const auto contents = git::getGitFile( repoDirectoryPath, benchmarkRepoFilePath, hash );
                     auto       data     = nlohmann::json::parse( contents );
-                    results[ benchmarkFile ].emplace_back( std::move( data ) );
+                    results[ benchmarkFile ].push_back( std::move( data ) );
                 }
             }
 
