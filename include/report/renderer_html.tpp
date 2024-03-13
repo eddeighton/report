@@ -21,7 +21,6 @@
 #ifndef GUARD_2024_March_08_renderer_html
 #define GUARD_2024_March_08_renderer_html
 
-
 #include "common/process.hpp"
 #include "common/file.hpp"
 #include "common/string.hpp"
@@ -149,9 +148,9 @@ inline void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nl
 
 template < typename Value >
 inline void graphValueToJSON( HTMLTemplateEngine&           engine,
-                       const Value&                  value,
-                       const std::optional< Value >& bookmarkOpt,
-                       nlohmann::json&               data )
+                              const Value&                  value,
+                              const std::optional< Value >& bookmarkOpt,
+                              nlohmann::json&               data )
 {
     std::ostringstream os;
 
@@ -189,7 +188,8 @@ inline void graphValueToJSON( HTMLTemplateEngine&           engine,
 }
 
 template < typename Value >
-inline void valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& textVector, nlohmann::json& data )
+inline void
+valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& textVector, nlohmann::json& data )
 {
     for( const auto& text : textVector )
     {
@@ -314,6 +314,24 @@ inline void renderTable( HTMLTemplateEngine& engine, const Table< Value >& table
     }
 
     engine.render( HTMLTemplateEngine::eTable, data, os );
+}
+
+template < typename Value >
+inline void renderPlot( HTMLTemplateEngine& engine, const Plot< Value >& plot, std::ostream& os )
+{
+    using namespace std::string_literals;
+
+    nlohmann::json data( { { "headings", nlohmann::json::array() }, { "points", nlohmann::json::array() } } );
+
+    valueVectorToJSON( engine, plot.m_heading, data[ "headings" ] );
+
+    for( const auto& p : plot.m_points )
+    {
+        nlohmann::json point( { { "x", p.x }, { "y", p.y }, { "z", p.z } } );
+        data[ "points" ].push_back( point );
+    }
+
+    engine.render( HTMLTemplateEngine::ePlot, data, os );
 }
 
 template < typename Value >
@@ -475,6 +493,7 @@ inline void renderContainer( HTMLTemplateEngine& engine, const Container< Value 
         void operator()( const Multiline< Value >& multiline ) const { renderMultiline( engine, multiline, os ); }
         void operator()( const Branch< Value >& branch ) const { renderBranch( engine, branch, os ); }
         void operator()( const Table< Value >& table ) const { renderTable( engine, table, os ); }
+        void operator()( const Plot< Value >& plot ) const { renderPlot( engine, plot, os ); }
         void operator()( const Graph< Value >& graph ) const { renderGraph( engine, graph, os ); }
 
     } visitor{ engine, os };
@@ -505,26 +524,26 @@ inline void renderReport( HTMLTemplateEngine& engine, const Container< Value >& 
 
 } // namespace detail
 
-template< typename Value >
+template < typename Value >
 inline void renderHTML( const Container< Value >& report, std::ostream& os, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
 }
 
-template< typename Value, typename Linker >
+template < typename Value, typename Linker >
 inline void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
 }
 
-template< typename Value >
+template < typename Value >
 inline void renderHTML( const Container< Value >& report, std::ostream& os )
 {
     HTMLTemplateEngine engine{ false };
     renderHTML( report, os, engine );
 }
 
-template< typename Value, typename Linker >
+template < typename Value, typename Linker >
 inline void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker )
 {
     HTMLTemplateEngine engine{ false };

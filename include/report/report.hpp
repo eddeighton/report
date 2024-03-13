@@ -48,10 +48,14 @@ template < typename Value >
 class Table;
 
 template < typename Value >
+class Plot;
+
+template < typename Value >
 class Graph;
 
 template < typename Value >
-using Container = std::variant< Line< Value >, Multiline< Value >, Branch< Value >, Table< Value >, Graph< Value > >;
+using Container
+    = std::variant< Line< Value >, Multiline< Value >, Branch< Value >, Table< Value >, Plot< Value >, Graph< Value > >;
 
 template < typename Value >
 using ContainerVector = std::vector< Container< Value > >;
@@ -201,6 +205,43 @@ Table( ValueVector< Value > label ) -> Table< Value >;
 
 template < typename Value >
 Table( ValueVector< Value >, std::vector< ContainerVector< Value > > ) -> Table< Value >;
+
+/***
+    Plot{ vec< Value >, vec< Point > }
+*/
+template < typename Value >
+class Plot
+{
+    friend class boost::serialization::access;
+    template < class Archive >
+    inline void serialize( Archive& archive, const unsigned int version )
+    {
+        archive& m_heading;
+        archive& m_points;
+    }
+
+public:
+    using ValueType = Value;
+
+    struct Point
+    {
+        double x = 0.0, y = 0.0, z = 0.0;
+
+    private:
+        friend class boost::serialization::access;
+        template < class Archive >
+        inline void serialize( Archive& archive, const unsigned int version )
+        {
+            archive& x;
+            archive& y;
+            archive& z;
+        }
+    };
+    using Points = std::vector< Point >;
+
+    ValueVector< Value > m_heading;
+    Points               m_points;
+};
 
 /***
     Graph{ vec< Node >, vec< Edge > }

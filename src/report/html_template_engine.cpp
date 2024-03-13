@@ -221,6 +221,26 @@ R"TEMPLATE(
 </table>)TEMPLATE",
 
 /////////////////////////////////////////////////////////////////
+// plot template
+R"TEMPLATE(
+
+set terminal svg size 600,400 dynamic enhanced font 'arial,10' mousing name "plot" butt dashlength 1.0 
+
+set output "plot.svg"
+
+set key fixed left top vertical Right noreverse enhanced autotitle box lt black linewidth 1.000 dashtype solid
+
+set title "{% for heading in headings %}{{ heading }} {% endfor %}" 
+set title  font ",20" textcolor lt -1 norotate
+set boxwidth 0.75 relative
+set style fill transparent solid 0.5
+set errorbars linecolor 'blue' linewidth 1.0 dashtype '.'
+
+plot 'plot.dat' with boxerrorbars fc 'blue'
+
+)TEMPLATE",
+
+/////////////////////////////////////////////////////////////////
 // graph template
 R"TEMPLATE(digraph
 {
@@ -347,11 +367,11 @@ R"TEMPLATE(digraph
 };
 // clang-format on
 
-}
+} // namespace
 
 HTMLTemplateEngine::HTMLTemplateEngine( bool bClearTempFiles )
     : m_pEnvironment( std::make_unique< inja::Environment >() )
-    , m_templateNames{ "report.jinja", "multiline.jinja", "branch.jinja", "table.jinja", "graph.jinja" }
+    , m_templateNames{ "report.jinja", "multiline.jinja", "branch.jinja", "table.jinja", "plot.jinja", "graph.jinja" }
     , m_tempFolder( boost::filesystem::temp_directory_path() / "graphs" / common::uuid() )
     , m_bClearTempFiles( bClearTempFiles )
 {
@@ -371,7 +391,7 @@ HTMLTemplateEngine::HTMLTemplateEngine( bool bClearTempFiles )
 
 HTMLTemplateEngine::HTMLTemplateEngine( const boost::filesystem::path& templateDir, bool bClearTempFiles )
     : m_pEnvironment( std::make_unique< inja::Environment >() )
-    , m_templateNames{ "report.jinja", "multiline.jinja", "branch.jinja", "table.jinja", "graph.jinja" }
+    , m_templateNames{ "report.jinja", "multiline.jinja", "branch.jinja", "table.jinja", "plot.jinja", "graph.jinja" }
     , m_tempFolder( boost::filesystem::temp_directory_path() / "graphs" / common::uuid() )
     , m_bClearTempFiles( bClearTempFiles )
 {
@@ -417,6 +437,64 @@ void HTMLTemplateEngine::renderTemplate( const nlohmann::json& data, TemplateTyp
     }
 }
 
+void HTMLTemplateEngine::renderPlot( const nlohmann::json& data, std::ostream& os )
+{
+    // generate the data file
+    {
+        boost::filesystem::path tempDataFile = m_tempFolder / "plot.dat";
+        auto                    pDataFile    = boost::filesystem::createNewFileStream( tempDataFile );
+        for( const auto& p : data[ "points" ] )
+        {
+            *pDataFile << p[ "x" ] << " " << p[ "y" ] << " " << p[ "z" ] << "\n";
+        }
+    }
+
+    boost::filesystem::path tempGNUPlotFile = m_tempFolder / "plot.txt";
+    {
+        // render the template
+        std::ostringstream osGNUPlot;
+        renderTemplate( data, ePlot, osGNUPlot );
+        // write the temporary file
+        {
+            auto pTempFile = boost::filesystem::createNewFileStream( tempGNUPlotFile );
+            *pTempFile << osGNUPlot.str();
+        }
+    }
+
+    // run gnuplot
+    {
+        auto currentDir = boost::filesystem::current_path();
+        boost::filesystem::current_path( m_tempFolder );
+
+        try
+        {
+            std::ostringstream osCmd;
+            osCmd << "gnuplot " << tempGNUPlotFile.string();
+
+            std::string strOutput, strError;
+            const int   iExitCode = common::runProcess( osCmd.str(), strOutput, strError );
+            VERIFY_RTE_MSG( iExitCode == EXIT_SUCCESS, "gnuplot failed with error: " << strError );
+            VERIFY_RTE_MSG( strError.empty(), "gnuplot failed with error: " << strError );
+            VERIFY_RTE_MSG( strOutput.empty(), "gnuplot failed with output: " << strOutput );
+        }
+        catch( std::exception& ex )
+        {
+            boost::filesystem::current_path( currentDir );
+            throw;
+        }
+
+        boost::filesystem::current_path( currentDir );
+    }
+
+    // load the resultant svg file
+    std::string strSVG;
+    {
+        boost::filesystem::path tempSVGFile = m_tempFolder / "plot.svg";
+        boost::filesystem::loadAsciiFile( tempSVGFile, strSVG );
+    }
+    os << strSVG;
+}
+
 void HTMLTemplateEngine::renderGraph( const nlohmann::json& data, std::ostream& os )
 {
     std::ostringstream osDot;
@@ -431,13 +509,16 @@ void HTMLTemplateEngine::renderGraph( const nlohmann::json& data, std::ostream& 
         *pTempFile << osDot.str();
     }
 
-    std::ostringstream osCmd;
-    osCmd << "dot -Tsvg -o" << tempSVGFile.string() << " " << tempDotFile.string();
+    // run graphviz
+    {
+        std::ostringstream osCmd;
+        osCmd << "dot -Tsvg -o" << tempSVGFile.string() << " " << tempDotFile.string();
 
-    std::string strOutput, strError;
-    const int   iExitCode = common::runProcess( osCmd.str(), strOutput, strError );
-    VERIFY_RTE_MSG( strError.empty(), "Graphviz failed with error: " << strError );
-    VERIFY_RTE_MSG( strOutput.empty(), "Graphviz failed with output: " << strOutput );
+        std::string strOutput, strError;
+        const int   iExitCode = common::runProcess( osCmd.str(), strOutput, strError );
+        VERIFY_RTE_MSG( strError.empty(), "Graphviz failed with error: " << strError );
+        VERIFY_RTE_MSG( strOutput.empty(), "Graphviz failed with output: " << strOutput );
+    }
 
     // deal with annoying graphviz behaviour with how id is generated where it doesnt work as bookmark
 
@@ -507,6 +588,11 @@ void HTMLTemplateEngine::render( TemplateType templateType, const nlohmann::json
         case eTable:
         {
             renderTemplate( data, eTable, os );
+        }
+        break;
+        case ePlot:
+        {
+            renderPlot( data, os );
         }
         break;
         case eGraph:

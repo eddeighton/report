@@ -73,6 +73,7 @@ public:
         eMultiLine,
         eBranch,
         eTable,
+        ePlot,
         eGraph,
         TOTAL_TEMPLATE_TYPES
     };
@@ -82,6 +83,7 @@ private:
     std::array< TemplatePtr, TOTAL_TEMPLATE_TYPES > m_templates;
 
     void renderTemplate( const nlohmann::json& data, TemplateType templateType, std::ostream& os );
+    void renderPlot( const nlohmann::json& data, std::ostream& os );
     void renderGraph( const nlohmann::json& data, std::ostream& os );
 
 public:

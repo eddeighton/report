@@ -39,6 +39,7 @@ set( JINJA_TEMPLATES
 	${REPORT_SRC_DIR}/report/templates/graph.jinja
 	${REPORT_SRC_DIR}/report/templates/multiline.jinja
 	${REPORT_SRC_DIR}/report/templates/report.jinja
+	${REPORT_SRC_DIR}/report/templates/plot.jinja
 	${REPORT_SRC_DIR}/report/templates/table.jinja
 	)
 

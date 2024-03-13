@@ -18,19 +18,74 @@
 //  NEGLIGENCE) OR STRICT LIABILITY, EVEN IF COPYRIGHT OWNERS ARE ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGES.
 
+#include "report/report.hpp"
+#include "report/renderer_html.hpp"
+
 #include "common/file.hpp"
 #include "common/git.hpp"
 #include "common/string.hpp"
 #include "common/assert_verify.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 
 #include <iostream>
 #include <sstream>
+#include <variant>
+
+namespace
+{
+using Value = std::variant< double, int, std::string >;
+
+using URL    = report::URL;
+using Colour = report::Colour;
+
+using ValueVector     = report::ValueVector< Value >;
+using ContainerVector = report::ContainerVector< Value >;
+
+using Report    = report::Container< Value >;
+using Branch    = report::Branch< Value >;
+using Line      = report::Line< Value >;
+using Multiline = report::Multiline< Value >;
+using Table     = report::Table< Value >;
+using Graph     = report::Graph< Value >;
+
+using ResultHistory    = std::vector< nlohmann::json >;
+using ResultHistoryMap = std::map< std::string, ResultHistory >;
+
+Report makeSummaryReport( const ResultHistoryMap& results )
+{
+    Branch report;
+
+    for( const auto& [ benchmark, resultSequence ] : results )
+    {
+        Branch branch{ { benchmark } };
+
+        for( const auto r : resultSequence )
+        {
+            for( const auto b : r[ "benchmarks" ] )
+            {
+
+            }
+        }
+
+
+
+        report.m_elements.emplace_back( std::move( branch ) );
+    }
+
+
+    return report;
+}
+
+} // namespace
 
 int main( int argc, const char* argv[] )
 {
+    std::string strMachineName, strConfigName;
+
     std::string                dataDirectory, repoDirectory, outputJSONFile, outputHTMLFile;
     std::vector< std::string > benchmarkDataFiles;
 
@@ -43,11 +98,14 @@ int main( int argc, const char* argv[] )
         // clang-format off
         options.add_options()
         ( "help",       po::bool_switch( &bShowHelp ),                                    "Show Command Line Help" )
+
+        ( "machine",    po::value< std::string >( &strMachineName ),                      "Machine host name" )
+        ( "config",     po::value< std::string >( &strConfigName ),                       "Build configuration name" )
+
+        ( "repo",       po::value< std::string >( &repoDirectory ),                       "Performance data git repository" )
         
-        ( "data",       po::value< std::string >( &dataDirectory ),                       "Data Directory" )
-        ( "repo",       po::value< std::string >( &repoDirectory ),                       "Get Repository Directory" )
-        ( "out_json",   po::value< std::string >( &outputJSONFile ),                      "Output data file" )
-        ( "out_html",   po::value< std::string >( &outputHTMLFile ),                      "Output html file" )
+        ( "output",     po::value< std::string >( &outputHTMLFile ),                      "Output html file" )
+
         ( "files",      po::value< std::vector< std::string > >( &benchmarkDataFiles ),   "Google benchmark files" )
         ;
         // clang-format on
@@ -71,68 +129,68 @@ int main( int argc, const char* argv[] )
 
     try
     {
-        const boost::filesystem::path dataDirectoryPath
-            = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( dataDirectory ) );
-        // VERIFY_RTE_MSG( boost::filesystem::exists( dataDirectoryPath ),
-        //                 "Failed to locate data directory at: " << dataDirectoryPath.string() );
-
-        const boost::filesystem::path outputJSONFilePath
-            = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( outputJSONFile ) );
-
-        const boost::filesystem::path outputHTMLFilePath
-            = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( outputHTMLFile ) );
+        VERIFY_RTE_MSG( !strMachineName.empty(), "Missing machine name" );
+        VERIFY_RTE_MSG( !strConfigName.empty(), "Missing configuration name" );
 
         const boost::filesystem::path repoDirectoryPath
             = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( repoDirectory ) );
         VERIFY_RTE_MSG( boost::filesystem::exists( repoDirectoryPath ),
-                        "Failed to locate git repository at: " << repoDirectoryPath.string() );
+                        "Failed to locate performance git repository at: " << repoDirectoryPath.string() );
         VERIFY_RTE_MSG(
             git::isGitRepo( repoDirectoryPath ), "Failed to locate git repository at: " << repoDirectoryPath.string() );
 
-        // const std::vector< boost::filesystem::path > inputSourceFiles
-        //     = mega::utilities::pathListToFiles( componentSrcDir, objectSourceFileNames );
+        VERIFY_RTE_MSG( !outputHTMLFile.empty(), "Missing output file name" );
+        const boost::filesystem::path outputHTMLFilePath
+            = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( outputHTMLFile ) );
 
-        int counter = 0;
+        const boost::filesystem::path benchmarkRepoDir = repoDirectoryPath / strMachineName / strConfigName;
+
         for( const auto& benchmarkFile : benchmarkDataFiles )
         {
             const boost::filesystem::path benchmarkFilePath
                 = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( benchmarkFile ) );
+            VERIFY_RTE_MSG( boost::filesystem::exists( benchmarkFilePath ),
+                            "Failed to locate benchmark result file: " << benchmarkFilePath.string() );
 
-            {
-                std::cout << "got: " << benchmarkFilePath.string() << "\n";
+            const boost::filesystem::path benchmarkRepoFilePath = benchmarkRepoDir / benchmarkFilePath.filename();
 
-                VERIFY_RTE_MSG(
-                    boost::filesystem::copyFileIfChanged( benchmarkFilePath, outputJSONFilePath ),
-                    "Failed to copy file: " << benchmarkFilePath.string() << " to: " << outputJSONFilePath.string() );
-            }
-
-            {
-                std::ostringstream os;
-                os << "bench_" << common::date() + ".json";
-                const boost::filesystem::path dataFileCopyPath = dataDirectoryPath / os.str();
-                boost::filesystem::ensureFoldersExist( dataFileCopyPath );
-
-                VERIFY_RTE_MSG(
-                    boost::filesystem::copyFileIfChanged( benchmarkFilePath, dataFileCopyPath ),
-                    "Failed to copy file: " << benchmarkFilePath.string() << " to: " << dataFileCopyPath.string() );
-            }
-
-            /*for( const auto& hash : git::getFileGitHashes( repoDirectoryPath, benchmarkFilePath ) )
-            {
-                std::cout << hash << "\n";
-
-                const auto contents = git::getGitFile( repoDirectoryPath, benchmarkFilePath, hash );
-
-                {
-                    std::ostringstream os;
-                    os << outputFile << "_" << counter++;
-
-                    auto pFile = boost::filesystem::createNewFileStream( os.str() );
-                    *pFile << contents;
-                }
-            }*/
+            boost::filesystem::ensureFoldersExist( benchmarkRepoFilePath );
+            boost::filesystem::copyFileIfChanged( benchmarkFilePath, benchmarkRepoFilePath );
         }
-        std::cout << std::endl;
+
+        // commit the new benchmark results
+        {
+            std::ostringstream osMsg;
+            osMsg << "Automated commit by bench_summary tool";
+            git::commit( repoDirectoryPath, osMsg.str() );
+        }
+
+        // generate summary report
+        {
+            // gather the data
+            ResultHistoryMap results;
+
+            for( const auto& benchmarkFile : benchmarkDataFiles )
+            {
+                const boost::filesystem::path benchmarkFilePath
+                    = boost::filesystem::edsCannonicalise( boost::filesystem::absolute( benchmarkFile ) );
+                const boost::filesystem::path benchmarkRepoFilePath = benchmarkRepoDir / benchmarkFilePath.filename();
+
+                for( const auto& hash : git::getFileGitHashes( repoDirectoryPath, benchmarkRepoFilePath ) )
+                {
+                    const auto contents = git::getGitFile( repoDirectoryPath, benchmarkRepoFilePath, hash );
+                    auto       data     = nlohmann::json::parse( contents );
+                    results[ benchmarkFile ].emplace_back( std::move( data ) );
+                }
+            }
+
+            // render the html report
+            {
+                const auto report = makeSummaryReport( results );
+                auto       pFile  = boost::filesystem::createNewFileStream( outputHTMLFilePath );
+                report::renderHTML( report, *pFile );
+            }
+        }
     }
     catch( std::exception& ex )
     {
