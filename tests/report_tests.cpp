@@ -62,7 +62,6 @@ TEST( Report, Basic )
     using M    = Multiline< V >;
     using T    = Table< V >;
     using P    = Plot< V >;
-    using Pt   = P::Point;
     using G    = Graph< V >;
 
     // clang-format off
@@ -76,7 +75,7 @@ TEST( Report, Basic )
             { 
                 { "Nested"s }, 
                 { 
-                    L{ "T2a"s }, 
+                    M{ {  "T2a"s, " "s, eOne } }, 
                     P{ 
                         { "Plot"s, eOne },
                         {

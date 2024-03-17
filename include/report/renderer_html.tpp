@@ -98,7 +98,7 @@ inline std::string javascriptHREF( const URL& url )
 }
 
 template < typename Value >
-inline void valueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
+inline void valueToJSON( HTMLTemplateEngine&, const Value& value, nlohmann::json& data )
 {
     std::optional< URL > urlOpt;
 
@@ -121,7 +121,7 @@ inline void valueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohman
 }
 
 template < typename Value >
-inline void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nlohmann::json& data )
+inline void graphValueToJSON( HTMLTemplateEngine&, const Value& value, nlohmann::json& data )
 {
     std::ostringstream os;
 
@@ -147,7 +147,7 @@ inline void graphValueToJSON( HTMLTemplateEngine& engine, const Value& value, nl
 }
 
 template < typename Value >
-inline void graphValueToJSON( HTMLTemplateEngine&           engine,
+inline void graphValueToJSON( HTMLTemplateEngine&,
                               const Value&                  value,
                               const std::optional< Value >& bookmarkOpt,
                               nlohmann::json&               data )
@@ -198,7 +198,7 @@ valueVectorToJSON( HTMLTemplateEngine& engine, const ValueVector< Value >& textV
 }
 
 template < typename T >
-inline void addOptionalBookmark( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
+inline void addOptionalBookmark( HTMLTemplateEngine&, T& element, nlohmann::json& data )
 {
     if( element.m_bookmark.has_value() )
     {
@@ -208,7 +208,7 @@ inline void addOptionalBookmark( HTMLTemplateEngine& engine, T& element, nlohman
 }
 
 template < typename T >
-inline bool addOptionalLink( HTMLTemplateEngine& engine, T& element, nlohmann::json& data )
+inline bool addOptionalLink( HTMLTemplateEngine&, T& element, nlohmann::json& data )
 {
     if( element.m_url.has_value() )
     {
@@ -304,7 +304,7 @@ inline void renderTable( HTMLTemplateEngine& engine, const Table< Value >& table
     for( const auto& pRow : table.m_rows )
     {
         nlohmann::json row( { { "values", nlohmann::json::array() } } );
-        for( const auto pContainer : pRow )
+        for( const auto& pContainer : pRow )
         {
             std::ostringstream osChild;
             renderContainer( engine, pContainer, osChild );
@@ -486,8 +486,6 @@ inline void renderContainer( HTMLTemplateEngine& engine, const Container< Value 
 
     struct Visitor
     {
-        using result_type = void;
-
         HTMLTemplateEngine& engine;
 
         std::ostream& os;

@@ -62,9 +62,7 @@ class HTMLTemplateEngine
     using EnvironmentPtr = std::unique_ptr< inja::Environment >;
     using TemplatePtr    = std::unique_ptr< inja::Template >;
 
-    EnvironmentPtr          m_pEnvironment;
-    boost::filesystem::path m_tempFolder;
-    bool                    m_bClearTempFiles;
+    EnvironmentPtr m_pEnvironment;
 
 public:
     enum TemplateType
@@ -80,6 +78,8 @@ public:
 
 private:
     std::array< std::string, TOTAL_TEMPLATE_TYPES > m_templateNames;
+    boost::filesystem::path                         m_tempFolder;
+    bool                                            m_bClearTempFiles;
     std::array< TemplatePtr, TOTAL_TEMPLATE_TYPES > m_templates;
 
     void renderTemplate( const nlohmann::json& data, TemplateType templateType, std::ostream& os );

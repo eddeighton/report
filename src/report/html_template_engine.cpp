@@ -389,7 +389,7 @@ HTMLTemplateEngine::HTMLTemplateEngine( bool bClearTempFiles )
         boost::filesystem::exists( m_tempFolder ), "Failed to create temporary folder: " << m_tempFolder.string() );
 
     m_pEnvironment->set_trim_blocks( true );
-    for( int i = 0; i != TOTAL_TEMPLATE_TYPES; ++i )
+    for( unsigned int i = 0U; i != TOTAL_TEMPLATE_TYPES; ++i )
     {
         const auto templateType = static_cast< TemplateType >( i );
         // use default templates instead of loading from disk
@@ -409,7 +409,7 @@ HTMLTemplateEngine::HTMLTemplateEngine( const boost::filesystem::path& templateD
         boost::filesystem::exists( m_tempFolder ), "Failed to create temporary folder: " << m_tempFolder.string() );
 
     m_pEnvironment->set_trim_blocks( true );
-    for( int i = 0; i != TOTAL_TEMPLATE_TYPES; ++i )
+    for( unsigned int i = 0U; i != TOTAL_TEMPLATE_TYPES; ++i )
     {
         const auto templateType = static_cast< TemplateType >( i );
         auto       templatePath = templateDir / m_templateNames[ templateType ];
@@ -455,15 +455,15 @@ void HTMLTemplateEngine::renderPlot( const nlohmann::json& data, std::ostream& o
         for( const auto& p : data[ "points" ] )
         {
             int iCount = 0;
-            for( const std::string& value : p[ "values" ] )
+            for( const auto& value : p[ "values" ] )
             {
                 if( iCount < 2 )
                 {
-                    *pDataFile << value << " ";
+                    *pDataFile << value.get< std::string >() << " ";
                 }
                 else
                 {
-                    *pDataFile << '\"' << value << "\" ";
+                    *pDataFile << '\"' << value.get< std::string >() << "\" ";
                 }
                 ++iCount;
             }
@@ -537,7 +537,7 @@ void HTMLTemplateEngine::renderGraph( const nlohmann::json& data, std::ostream& 
         osCmd << "dot -Tsvg -o" << tempSVGFile.string() << " " << tempDotFile.string();
 
         std::string strOutput, strError;
-        const int   iExitCode = common::runProcess( osCmd.str(), strOutput, strError );
+        common::runProcess( osCmd.str(), strOutput, strError );
         VERIFY_RTE_MSG( strError.empty(), "Graphviz failed with error: " << strError );
         VERIFY_RTE_MSG( strOutput.empty(), "Graphviz failed with output: " << strOutput );
     }

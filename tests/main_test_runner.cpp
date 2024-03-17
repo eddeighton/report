@@ -86,7 +86,7 @@ int inner_main( int argc, char* argv[] )
             boost::filesystem::exists( g_templateDir ), "File not found result at : " << g_templateDir.string() );
     }
 
-    std::size_t szResult = 0U;
+    int szResult = 0;
 
     iRepeats = std::max< int >( 1, iRepeats );
 

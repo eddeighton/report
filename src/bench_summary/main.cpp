@@ -107,7 +107,6 @@ Report makeSummaryReport( const ResultHistoryMap& results )
                 // "time_unit": "ns"
 
                 const double realTime = b[ "real_time" ];
-                const double cpuTime  = b[ "cpu_time" ];
 
                 auto iFind = plots.find( name );
                 if( iFind != plots.end() )
@@ -126,7 +125,11 @@ Report makeSummaryReport( const ResultHistoryMap& results )
 
         for( const auto& [ _, plot ] : plots )
         {
-            branch.m_elements.push_back( std::move( plot ) );
+            // avoid gnuplot warning when only one point
+            if( plot.m_points.size() > 1 )
+            {
+                branch.m_elements.push_back( std::move( plot ) );
+            }
         }
 
         report.m_elements.push_back( std::move( branch ) );
