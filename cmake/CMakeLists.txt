@@ -4,9 +4,6 @@ project( Report )
 
 include( ${WORKSPACE_ROOT_PATH}/src/env/src/common_settings.cmake )
 
-#enable ctest
-enable_testing()
-
 #setup some common directories from the root of the project
 set( CMAKE_PARENT_PATH ${CMAKE_CURRENT_LIST_DIR}/.. )
 find_path( REPORT_ROOT_DIR NAMES tests PATHS ${CMAKE_PARENT_PATH} REQUIRED )

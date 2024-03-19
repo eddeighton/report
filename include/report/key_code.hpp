@@ -28,7 +28,7 @@ namespace report
     {
         friend class boost::serialization::access;
         template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
+        inline void serialize( Archive& archive, const unsigned int )
         {
             archive& boost::serialization::make_nvp( "shortcuts", m_shortcuts );
         }

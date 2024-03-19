@@ -532,7 +532,7 @@ inline void renderHTML( const Container< Value >& report, std::ostream& os, HTML
 }
 
 template < typename Value, typename Linker >
-inline void renderHTML( const Container< Value >& report, std::ostream& os, Linker& linker, HTMLTemplateEngine& engine )
+inline void renderHTML( const Container< Value >& report, std::ostream& os, Linker&, HTMLTemplateEngine& engine )
 {
     detail::renderReport( engine, report, os );
 }

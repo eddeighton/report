@@ -41,7 +41,7 @@ namespace boost::serialization
 {
 
 template < class Archive >
-inline void serialize( Archive& ar, report::URL& url, const unsigned int version )
+inline void serialize( Archive& ar, report::URL& url, const unsigned int )
 {
     if constexpr( Archive::is_saving::value )
     {

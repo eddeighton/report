@@ -69,7 +69,7 @@ class Line
     friend class boost::serialization::access;
 
     template < class Archive >
-    inline void serialize( Archive& archive, const unsigned int version )
+    inline void serialize( Archive& archive, const unsigned int )
     {
         archive& m_element;
         archive& m_url;
@@ -110,7 +110,7 @@ class Multiline
 {
     friend class boost::serialization::access;
     template < class Archive >
-    inline void serialize( Archive& archive, const unsigned int version )
+    inline void serialize( Archive& archive, const unsigned int )
     {
         archive& m_elements;
         archive& m_url;
@@ -151,7 +151,7 @@ class Branch
 {
     friend class boost::serialization::access;
     template < class Archive >
-    inline void serialize( Archive& archive, const unsigned int version )
+    inline void serialize( Archive& archive, const unsigned int )
     {
         archive& m_label;
         archive& m_elements;
@@ -186,7 +186,7 @@ class Table
 {
     friend class boost::serialization::access;
     template < class Archive >
-    inline void serialize( Archive& archive, const unsigned int version )
+    inline void serialize( Archive& archive, const unsigned int )
     {
         archive& m_headings;
         archive& m_rows;
@@ -214,7 +214,7 @@ class Plot
 {
     friend class boost::serialization::access;
     template < class Archive >
-    inline void serialize( Archive& archive, const unsigned int version )
+    inline void serialize( Archive& archive, const unsigned int )
     {
         archive& m_heading;
         archive& m_points;
@@ -241,7 +241,7 @@ class Graph
 {
     friend class boost::serialization::access;
     template < class Archive >
-    inline void serialize( Archive& archive, const unsigned int version )
+    inline void serialize( Archive& archive, const unsigned int )
     {
         archive& m_nodes;
         archive& m_edges;
@@ -278,7 +278,7 @@ public:
         }
 
         template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
+        inline void serialize( Archive& archive, const unsigned int )
         {
             archive& m_value;
         }
@@ -291,7 +291,7 @@ public:
     {
         friend class boost::serialization::access;
         template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
+        inline void serialize( Archive& archive, const unsigned int )
         {
             archive& m_rows;
             archive& m_colour;
@@ -318,7 +318,7 @@ public:
     {
         friend class boost::serialization::access;
         template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
+        inline void serialize( Archive& archive, const unsigned int )
         {
             archive& m_rows;
             archive& m_colour;
@@ -342,7 +342,7 @@ public:
     {
         friend class boost::serialization::access;
         template < class Archive >
-        inline void serialize( Archive& archive, const unsigned int version )
+        inline void serialize( Archive& archive, const unsigned int )
         {
             archive& m_source;
             archive& m_target;
@@ -383,7 +383,7 @@ public:
             }
 
             template < class Archive >
-            inline void serialize( Archive& archive, const unsigned int version )
+            inline void serialize( Archive& archive, const unsigned int )
             {
                 archive& m_style;
             }
